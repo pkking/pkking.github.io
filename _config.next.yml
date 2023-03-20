@@ -98,10 +98,10 @@ creative_commons:
 # ---------------------------------------------------------------
 
 # Schemes
-scheme: Muse
+#scheme: Muse
 #scheme: Mist
 #scheme: Pisces
-#scheme: Gemini
+scheme: Gemini
 
 # Dark Mode
 darkmode: true
@@ -164,7 +164,7 @@ sidebar:
 # Sidebar Avatar
 avatar:
   # Replace the default image and set the url here.
-  url: #/images/avatar.gif
+  url: https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de
   # If true, the avatar will be dispalyed in circle.
   rounded: false
   # If true, the avatar will be rotated with the cursor.
@@ -178,8 +178,8 @@ site_state: true
 # Key is the link label showing to end users.
 # Value before `||` delimiter is the target permalink, value after `||` delimiter is the name of Font Awesome icon.
 social:
-  #GitHub: https://github.com/yourname || github
-  #E-Mail: mailto:yourname@gmail.com || envelope
+  GitHub: https://github.com/pkking || github
+  E-Mail: mailto:pkwarcraft@gmail.com || envelope
   #Weibo: https://weibo.com/yourname || weibo
   #Google: https://plus.google.com/yourname || google
   #Twitter: https://twitter.com/yourname || twitter
@@ -373,7 +373,7 @@ back2top:
 
 # Reading progress bar
 reading_progress:
-  enable: false
+  enable: true
   # Available values: top | bottom
   position: top
   color: "#37c6c0"
@@ -390,8 +390,8 @@ bookmark:
 
 # `Follow me on GitHub` banner in the top-right corner.
 github_banner:
-  enable: false
-  permalink: https://github.com/yourname
+  enable: true
+  permalink: https://github.com/pkking
   title: Follow me on GitHub
 
 
@@ -422,7 +422,7 @@ font:
   # Global font settings used for all elements inside <body>.
   global:
     external: true
-    family: Noto Sans SC
+    family: Bree Serif
     size:
 
   # Font settings for site title (.site-title).
@@ -445,7 +445,7 @@ font:
   # Font settings for <code> and code blocks.
   codes:
     external: true
-    family: Roboto Mono 
+    family: Roboto Mono
 
 
 # ---------------------------------------------------------------
