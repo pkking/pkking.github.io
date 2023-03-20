@@ -26,7 +26,10 @@ jobs:
       - name: Install Dependencies
         run: npm install
       - name: Build
-        run: npm run build
+        run: | 
+          sed -i 's|url: https://mywaaagh_admin.gitee.io/blog/|url: https://pkking.github.io/|g' _config.yml
+          sed -i 's|root: /blog/|root: /|g' _config.yml
+          npm run build
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
