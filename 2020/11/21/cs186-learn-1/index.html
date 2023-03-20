@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/blog/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/blog/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/blog/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/blog/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/blog/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noto Sans SC:300,300italic,400,400italic,700,700italic|Roboto Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/blog/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"mywaaagh_admin.gitee.io","root":"/blog/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="intro数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。 cs186这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的 准备工作 准备一个支持sql的数据库（sqlite，mysql，tidb等都行） 进入数据库命令行 创建一个表12CREATE TAB">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cs186学习-笔记1">
+<meta property="og:url" content="https://mywaaagh_admin.gitee.io/blog/2020/11/21/cs186-learn-1/index.html">
+<meta property="og:site_name" content="a cup of waaagh">
+<meta property="og:description" content="intro数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。 cs186这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的 准备工作 准备一个支持sql的数据库（sqlite，mysql，tidb等都行） 进入数据库命令行 创建一个表12CREATE TAB">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-11-21T14:13:00.000Z">
+<meta property="article:modified_time" content="2023-03-20T08:03:32.509Z">
+<meta property="article:author" content="Chaoran">
+<meta property="article:tag" content="database">
+<meta property="article:tag" content="sql">
+<meta property="article:tag" content="cs186">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://mywaaagh_admin.gitee.io/blog/2020/11/21/cs186-learn-1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>cs186学习-笔记1 | a cup of waaagh</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/blog/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">a cup of waaagh</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/blog/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/blog/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://mywaaagh_admin.gitee.io/blog/2020/11/21/cs186-learn-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/blog/images/avatar.gif">
+      <meta itemprop="name" content="Chaoran">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          cs186学习-笔记1
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-11-21 22:13:00" itemprop="dateCreated datePublished" datetime="2020-11-21T22:13:00+08:00">2020-11-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-03-20 16:03:32" itemprop="dateModified" datetime="2023-03-20T16:03:32+08:00">2023-03-20</time>
+              </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/blog/2020/11/21/cs186-learn-1/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/11/21/cs186-learn-1/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
+<p><a target="_blank" rel="noopener" href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
+<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
+<li>进入数据库命令行</li>
+<li>创建一个表<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (name Text,age <span class="type">bigint</span>,num_dogs <span class="type">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (name,`age`,num_dogs) <span class="keyword">values</span> (<span class="string">&#x27;Ace&#x27;</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">&#x27;Ada&#x27;</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">&#x27;Ben&#x27;</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">&#x27;Cho&#x27;</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2><p>进入数据库</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></table></figure>
+<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3><p>基本格式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>col<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span>;</span><br></pre></td></tr></table></figure>
+<p>举例：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,num_dogs <span class="keyword">FROM</span> person;</span><br><span class="line">name<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">3</span></span><br><span class="line">Ben<span class="operator">|</span><span class="number">2</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></table></figure>
+<p>这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</p>
+<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span> <span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span></span><br></pre></td></tr></table></figure>
+<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">18</span><span class="operator">|</span><span class="number">3</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">27</span><span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span> <span class="keyword">AND</span> num_dogs <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
+<ol>
+<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
+<li><code>NULL</code>在bool判断中，表示false</li>
+<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
+</ol>
+<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span> <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">HAVING</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span>; <span class="comment">-- 在group by之后执行 </span></span><br></pre></td></tr></table></figure>
+<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
+<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/blog/tags/database/" rel="tag"># database</a>
+              <a href="/blog/tags/sql/" rel="tag"># sql</a>
+              <a href="/blog/tags/cs186/" rel="tag"># cs186</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/blog/2017/07/31/manacher/" rel="prev" title="Manacher 算法求最长回文子串">
+      <i class="fa fa-chevron-left"></i> Manacher 算法求最长回文子串
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/blog/2023/03/17/i3wm_in_openeuler/" rel="next" title="在openEuler中搭建i3wm">
+      在openEuler中搭建i3wm <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#intro"><span class="nav-number">1.</span> <span class="nav-text">intro</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.1.</span> <span class="nav-text">准备工作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9F%BA%E6%9C%ACsql%E8%AF%AD%E5%8F%A5"><span class="nav-number">1.2.</span> <span class="nav-text">基本sql语句</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5"><span class="nav-number">1.2.1.</span> <span class="nav-text">查询语句</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%87%E6%BB%A4%E6%95%B0%E6%8D%AE"><span class="nav-number">1.2.2.</span> <span class="nav-text">过滤数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#bool-%E6%93%8D%E4%BD%9C"><span class="nav-number">1.2.3.</span> <span class="nav-text">bool 操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NULL%E7%9B%B8%E5%85%B3"><span class="nav-number">1.2.4.</span> <span class="nav-text">NULL相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%81%9A%E5%90%88"><span class="nav-number">1.2.5.</span> <span class="nav-text">聚合</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Chaoran</p>
+  <div class="site-description" itemprop="description">some notions</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/blog/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/blog/tags/">
+        <span class="site-state-item-count">25</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Chaoran</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/blog/lib/anime.min.js"></script>
+  <script src="/blog/lib/velocity/velocity.min.js"></script>
+  <script src="/blog/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/blog/js/utils.js"></script>
+
+<script src="/blog/js/motion.js"></script>
+
+
+<script src="/blog/js/schemes/muse.js"></script>
+
+
+<script src="/blog/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/blog/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+<script>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : '[object Object]',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+  
+
+  
+
+<script>
+  function loadCount() {
+    var d = document, s = d.createElement('script');
+    s.src = 'https://lcrpkking.disqus.com/count.js';
+    s.id = 'dsq-count-scr';
+    (d.head || d.body).appendChild(s);
+  }
+  // defer loading until the whole page loading is completed
+  window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://mywaaagh_admin.gitee.io/blog/2020/11/21/cs186-learn-1/";
+    this.page.identifier = "2020/11/21/cs186-learn-1/";
+    this.page.title = "cs186学习-笔记1";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://lcrpkking.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
+</script>
+
+</body>
+</html>
