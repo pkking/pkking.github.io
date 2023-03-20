@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>runc 源码分析-1 概述</title>
+    <url>/blog/2017/05/11/analysis-1/</url>
+    <content><![CDATA[<h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
+<ul>
+<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
+<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
+<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
+</ul>
+<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec" target="_blank" rel="noopener">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
+<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
+<p>下图就是runc出现前后，docker架构的变化。</br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
+<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。</br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
+<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
+<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></table></figure>
+
+<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
+]]></content>
+      <tags>
+        <tag>container</tag>
+        <tag>oci</tag>
+        <tag>rkt</tag>
+        <tag>docker</tag>
+        <tag>k8s</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>cs186学习-笔记1</title>
+    <url>/blog/2020/11/21/cs186-learn-1/</url>
+    <content><![CDATA[<h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
+<p><a href="https://cs186berkeley.net/" target="_blank" rel="noopener">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
+<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
+<li>进入数据库命令行</li>
+<li>创建一个表<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (<span class="keyword">name</span> <span class="built_in">Text</span>,age <span class="built_in">bigint</span>,num_dogs <span class="built_in">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (<span class="keyword">name</span>,<span class="string">`age`</span>,num_dogs) <span class="keyword">values</span> (<span class="string">'Ace'</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">'Ada'</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">'Ben'</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">'Cho'</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></table></figure>
+<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2>进入数据库<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></table></figure>
+<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3>基本格式：<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> &lt;<span class="keyword">col</span>&gt; <span class="keyword">FROM</span> &lt;tbl&gt;;</span><br></pre></td></tr></table></figure>
+举例：<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">sqlite&gt; SELECT name,num_dogs FROM person;</span><br><span class="line">name|num_dogs</span><br><span class="line">Ace|4</span><br><span class="line">Ada|3</span><br><span class="line">Ben|2</span><br><span class="line">Cho|3</span><br></pre></td></tr></table></figure>
+这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</li>
+</ul>
+<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> &lt;cols&gt; <span class="keyword">FROM</span> &lt;tbl&gt; <span class="keyword">WHERE</span> &lt;predicate&gt;</span><br></pre></td></tr></table></figure>
+<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">sqlite&gt; SELECT name,age,num_dogs FROM person WHERE age &gt;= 18;</span><br><span class="line">name|age|num_dogs</span><br><span class="line">Ace|20|4</span><br><span class="line">Ada|18|3</span><br><span class="line">Cho|27|3</span><br></pre></td></tr></table></figure>
+
+<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line">sqlite&gt; SELECT name,age,num_dogs FROM person WHERE age &gt;= 18 AND num_dogs &gt; 3;</span><br><span class="line">name|age|num_dogs</span><br><span class="line">Ace|20|4</span><br></pre></td></tr></table></figure>
+
+<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
+<ol>
+<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
+<li><code>NULL</code>在bool判断中，表示false</li>
+<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
+</ol>
+<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> &lt;cols&gt; <span class="keyword">FROM</span> &lt;tbl&gt;</span><br><span class="line"><span class="keyword">WHERE</span> &lt;predicate&gt; <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> &lt;cols&gt;</span><br><span class="line"><span class="keyword">HAVING</span> &lt;predicate&gt;; <span class="comment">-- 在group by之后执行</span></span><br></pre></td></tr></table></figure>
+<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
+<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
+]]></content>
+      <tags>
+        <tag>database</tag>
+        <tag>sql</tag>
+        <tag>cs186</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>关于在amd64架构下构建arm架构deb包的问题</title>
+    <url>/blog/2015/05/12/crossBuild/</url>
+    <content><![CDATA[<h1 id="poky-amp-yocto"><a href="#poky-amp-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
+<p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
+<h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
+<p>不过转念一想，既然要基于ubuntu的源码，那么yocto中所带的源码则显然无法使用了，因为yocto虽然也能制作deb包，不过和ubuntu中的版本完全无法兼容，并且ubuntu对上游源码所打的一些补丁yocto也没有集成，因此可能需要对yocto进行一番改造。</p>
+<h3 id="放弃"><a href="#放弃" class="headerlink" title="放弃"></a>放弃</h3><p>参考了yocto的文档后，我们发现，yocto实现deb包的机制和通常的debian/ubuntu构建流程不太一样，后者使用dpkg-buildpackage来构建特定的包，而yocto则采用了自己实现的机制（<code>lib/pm.py</code>利用dpkg apt等工具实现了自己的打包流程）这导致其构建包的流程几乎不透明了，而要通过修改yocto来达到生成特定版本ubuntu兼容的deb包，则可以预见包含比较大的工作量。</p>
+<p>故此，yocto的路线暂停，而这里的主要问题是，ubuntu的rootfs是一个基于二进制包的img，我们只需要找到一种方法，能够将上游源码构建为某个版本apt能够识别、安装的包即可，有了这些包，构建rootfs就再轻松不过了</p>
+<h1 id="sbuild"><a href="#sbuild" class="headerlink" title="sbuild"></a>sbuild</h1><p>在yocto的方案受挫后，我们发现，当前主要的问题在于如何将交叉编译生成的二进制文件打包成软件包，经过一番搜索后，cross-build映入了我们眼帘。在看完<a href="https://wiki.ubuntu.com/CrossBuilding" target="_blank" rel="noopener">这篇</a>、<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding" target="_blank" rel="noopener">这篇</a>和<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart" target="_blank" rel="noopener">这篇</a>后，总结出一个结论：妈蛋交叉构建还是个坑啊，大家要构建最好把源码传到<code>launchpad</code>上啊，我们建议大家构建的时候用最新的工具链哟，也欢迎搭建帮忙一起测试sbuild和那些个坑爹的package 维护者挖的坑 （逃</p>
+<p>不过第一篇文中，同时也表示业界在<code>crossbuild</code>的泥潭里正缓慢的前行，那么之前的<code>ubuntu for arm</code>版本又是如何构建出来的呢？？下面来解答！</p>
+<h3 id="crossBuild-node"><a href="#crossBuild-node" class="headerlink" title="crossBuild node"></a>crossBuild node</h3><p>这里就要请出<a href="https://launchpad.net/ubuntu" target="_blank" rel="noopener">launchpad</a>了，根据<a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379" target="_blank" rel="noopener">这篇文章</a>，可以得知，ubuntu基本是采用launchpad的分布式构建节点来制作软件包的，并且他们还是用的最慢的本地构建方法（也就是利用<code>qemu</code>，在<code>x86_64</code>的虚拟机上模拟<code>arm</code>环境，然后用arm架构的工具构建软件包），事实上，launchpad的<a href="https://help.launchpad.net/Packaging/PPA" target="_blank" rel="noopener">这篇文章</a>也是这么说的。</p>
+<p>既然如此，那我们何不自己搞一发本地构建？</p>
+<p>于是跟随着这篇<a href="https://wiki.ubuntu.com/SimpleSbuild" target="_blank" rel="noopener">guide</a> 我们搭建了一个 host,build,target都是armhf的chroot环境（前面的教程搭建的是基于amd64的sbuild chroot，只需要在mk-sbuild和sbuild的时候，将–arch=armhf加入命令行即可），然后就可以轻松的在amd64下构建arm软件包了</p>
+<h1 id="buildd"><a href="#buildd" class="headerlink" title="buildd"></a>buildd</h1><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>用sbuild构建了一些包之后，发现，我们的日志和launchpad上的build.log并不一样，launchpad似乎使用了一个叫做buildd的工具来进行自动化的构建，google一番之后，发现了<a href="https://www.debian.org/devel/buildd/" target="_blank" rel="noopener">这篇文章</a>，原来launchpad利用<code>wanna-build buildd sbuild</code>构建了一套自动化构建环境，buildd周期性的检查upload上来的源码包，而wanna-build则维护了一个包含各个软件包在各个架构上的构建状态的数据库，buildd通过数据库来选择是否重新构建（如果该包当前状态是未成功构建或超过包的保质期）或者忽略本次构建（包已经构建成功并且在保质期内），而最终的构建工具，则是sbuild</p>
+<h3 id="还是sbuild"><a href="#还是sbuild" class="headerlink" title="还是sbuild"></a>还是sbuild</h3><p>最终真相大白，虽然我们可能没有资源架设<code>openstack集群</code>来进行分布式构建，但是只要采用和launchpad一样策略：使用sbuild构建各个架构的软件包，也是毫无问题的。</p>
+<p>最后，送上利用sbuild从零构建arm等架构软件包的<a href="https://wiki.debian.org/sbuild" target="_blank" rel="noopener">官方教程</a></p>
+<h1 id="参考文献："><a href="#参考文献：" class="headerlink" title="参考文献："></a>参考文献：</h1><ul>
+<li><a href="https://wiki.debian.org/sbuild" target="_blank" rel="noopener">https://wiki.debian.org/sbuild</a></li>
+<li><a href="https://wiki.ubuntu.com/SimpleSbuild" target="_blank" rel="noopener">https://wiki.ubuntu.com/SimpleSbuild</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch" target="_blank" rel="noopener">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch</a></li>
+<li><a href="https://wiki.ubuntu.com/CrossBuilding" target="_blank" rel="noopener">https://wiki.ubuntu.com/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding" target="_blank" rel="noopener">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart" target="_blank" rel="noopener">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart</a></li>
+<li><a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379" target="_blank" rel="noopener">http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379</a></li>
+<li><a href="https://help.launchpad.net/Packaging/PPA" target="_blank" rel="noopener">https://help.launchpad.net/Packaging/PPA</a></li>
+<li><a href="https://www.debian.org/devel/buildd/" target="_blank" rel="noopener">https://www.debian.org/devel/buildd/</a></li>
+</ul>
+]]></content>
+      <tags>
+        <tag>ubuntu</tag>
+        <tag>sbuild</tag>
+        <tag>arm</tag>
+        <tag>crossBuild</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Manacher 算法求最长回文子串</title>
+    <url>/blog/2017/07/31/manacher/</url>
+    <content><![CDATA[<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>本文来源于<code>leetcode</code>上的一道求最长回文子串的<a href="https://leetcode.com/problems/longest-palindromic-substring" target="_blank" rel="noopener">中级算法题</a></p>
+<h1 id="先来个思路"><a href="#先来个思路" class="headerlink" title="先来个思路"></a>先来个思路</h1><p>由回文的性质想到，从回文的对称轴向两边同时扩张，在回文半径内，两边的字符一定是相同的。</br><br>因此，我们是否可以从左向右依次遍历字符串，用扩展的方法来找出所有的回文串，并记录最长的那一个呢?</br><br>说干就干，经过几次WA，终于AC了，代码如下：</p>
+<figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="keyword">string</span>)</span> <span class="title">string</span></span> &#123;</span><br><span class="line">    i, j, max, current_len := <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span></span><br><span class="line">    <span class="keyword">var</span> longest <span class="keyword">string</span></span><br><span class="line">    n := <span class="built_in">len</span>(s)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i = <span class="number">0</span>; i &lt; n; i++ &#123;</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j &lt; n; j++ &#123; <span class="comment">// if the length of the palindrome is odd  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j] &#123;</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max &#123;</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j]</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j + <span class="number">1</span> &lt; n; j++ &#123; <span class="comment">// for the even case  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j + <span class="number">1</span>] &#123;</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">2</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max &#123;</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j + <span class="number">1</span>]</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> longest;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>简单估计了下，长度为<code>n</code>的字符串，该思路的时间复杂度应该是<code>O(n^2)</code>级别的，而且，可以看到代码中需要分别处理奇偶长度的字符串，比较麻烦。</br><br>最最最关键的是，实在想不出其他的发子了。。。哈哈</p>
+<h1 id="manacher"><a href="#manacher" class="headerlink" title="manacher"></a>manacher</h1><p>经过一番搜索后，发现该问题大多数思路是使用 <code>manacher</code>算法，这个算法可以完美的解决奇偶问题，并且时间复杂度只有<code>O(n)</code></p>
+<h2 id="解决奇偶单独处理的问题"><a href="#解决奇偶单独处理的问题" class="headerlink" title="解决奇偶单独处理的问题"></a>解决奇偶单独处理的问题</h2><p>由奇偶数的性质：奇数+偶数=奇数，因此假设我们的序列长度为奇数，我们在序列首尾和每个字符之间都添加一个字符<code>#</code>，则长度变为奇数，同理，长度为偶数时，如此处理后长度仍为奇数。</br></p>
+<p>由此，通过添加一个额外的字符，就能解决序列长度特殊处理的问题。</p>
+<h2 id="算法实际流程"><a href="#算法实际流程" class="headerlink" title="算法实际流程"></a>算法实际流程</h2><p>将问题简单化之后，接下来就要进入算法的核心流程了。</br><br>首先，manacher需要借助一个辅助数组<code>p[i]</code>，用来记录位置为<code>i</code>的字符的回文半径，因而字符串<code>#a#b#a#d</code>的<code>p[i]</code>则为：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">处理后的字符串 |   # a # b # a # d #</span><br><span class="line">p[i]          |   1 2 1 4 1 2 1 2 1</span><br><span class="line">原始回文长度   |     1   3   1   1</span><br></pre></td></tr></table></figure>
+<p>可以看到，对于和原始字符串中对应位置的字符所在回文的长度，正好等于处理后的字符串的<code>p[i] - 1</code></br><br>也就是说，只要求得了<code>p[i]</code>，就能获得最长的回文串</p>
+<h2 id="求p-i"><a href="#求p-i" class="headerlink" title="求p[i]"></a>求<code>p[i]</code></h2><p>求<code>p[i]</code>的情况可以分为两种：</p>
+<ol>
+<li>当前的字符处于未被遍历过的字符串</li>
+<li>当前的字符处于已经被遍历过的字符串</li>
+</ol>
+<p>对于情况<code>1</code>，由于没有历史数据可以借鉴，因此只能直接重新通过双向扩展来求回文半径</br><br>而对于情况<code>2</code>，如果我们不利用已经遍历过的回文的性质，那么算法就会和一开始的暴力遍历法一样低效，因此，这里需要仔细考虑如何利用回文性质快速求出会问半径<code>p[i]</code></br></p>
+<h3 id="利用历史数据快速求解回文半径"><a href="#利用历史数据快速求解回文半径" class="headerlink" title="利用历史数据快速求解回文半径"></a>利用历史数据快速求解回文半径</h3><p>假设之前已遍历的回文子串能延伸到达的最远位置为<code>max</code>，其所对应的对称轴为<code>id</code>，那么，对于上文的情况<code>2</code>，当前的字符<code>c</code>一定位于<code>max</code>的左边，并且可以利用回文的性质，通过<code>c</code>关于<code>id</code>的对称点<code>j</code>来求<code>p[i]</code></br><br><img src="/images/manacher-1.png" alt="situation 2"></p>
+<p>因此，我们可以看到，回文半径的求解，分为以下几个情况：</p>
+<ol>
+<li><code>j</code>的回文包含在<code>id</code>的回文内</br><br><img src="/images/manacher-3.png" alt="c bettween 0 and max"></br><br>这种情况下，<code>p[i] = p[j] = p[2*id - i]</code>且<code>p[i] &lt; max - i</code></li>
+<li><code>j</code>的回文包含在<code>id</code>的回文外</br><br><img src="/images/manacher-2.png" alt="c is partly out of max"></br><br>这种情况下，<code>j</code>的回文半径已经超出了<code>id</code>的半径，因此，我们需要推断<code>i</code>的回文半径是否也会超出</br><br>结论是：不会！</br><br>原因：假如<code>j</code>的回文包含<code>a</code>和<code>b</code>，且<code>b</code>等于<code>c</code>（<code>b</code>，<code>c</code>关于<code>id</code>对称），那么如果<code>i</code>的回文超过了<code>max</code>，则超过<code>max</code>的部分必定和<code>j</code>超出<code>id</code>左边回文半径有部分相等，这样，就会导致<code>id</code>的回文半径超出<code>max</code>，和已知条件矛盾，因此这是不可能的</br><br>此时，<code>p[i] = max - i</code></li>
+</ol>
+<p>综上所述，当<code>p[i] &lt; max - i</code>时，<code>p[i] = p[2*id - i]</code>，而<code>p[i] == max - i</code>时，<code>p[i] == max - i</code>，因此可以得到，`p[i] = min(max - i, p[2*id - i])</p>
+<h2 id="最后，上代码"><a href="#最后，上代码" class="headerlink" title="最后，上代码"></a>最后，上代码</h2><figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">min</span><span class="params">(a, b <span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> a &gt; b &#123; </span><br><span class="line">        <span class="keyword">return</span> b</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="keyword">string</span>)</span> <span class="title">string</span></span> &#123;</span><br><span class="line">    tmp := <span class="string">"#"</span> + strings.Join(strings.Split(s,<span class="string">""</span>),<span class="string">"#"</span>) + <span class="string">"#"</span> </span><br><span class="line">    id, l, max, maxlen, mxpos := <span class="number">0</span>, <span class="built_in">len</span>(tmp), <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">    p := <span class="built_in">make</span>([]<span class="keyword">int</span>, l)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i:=<span class="number">0</span>; i&lt;l; i++ &#123;</span><br><span class="line">        <span class="keyword">if</span> max &gt; i &#123;</span><br><span class="line">            p[i] = min(p[<span class="number">2</span>*id - i], max - i)</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; </span><br><span class="line">            p[i] = <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> ;i &gt;= p[i] &amp;&amp; i + p[i] &lt; l &amp;&amp; tmp[i-p[i]] == tmp[i+p[i]]; &#123;</span><br><span class="line">            p[i] += <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> p[i] + i &gt; max &#123; </span><br><span class="line">            max  = p[i] + i</span><br><span class="line">            id = i</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> maxlen &lt; p[i] &#123;</span><br><span class="line">            maxlen = p[i]</span><br><span class="line">            mxpos = i</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> s[(mxpos+<span class="number">1</span>-maxlen)/<span class="number">2</span>:(mxpos<span class="number">-1</span>+maxlen)/<span class="number">2</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="http://www.61mon.com/index.php/archives/181/" target="_blank" rel="noopener">http://www.61mon.com/index.php/archives/181/</a></li>
+</ul>
+]]></content>
+      <tags>
+        <tag>algrithm</tag>
+        <tag>manacher</tag>
+        <tag>palindromic</tag>
+        <tag>leetcode</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>利用pelican和gitcafe搭建博客</title>
+    <url>/blog/2015/02/18/how_to_build_gitcafe_pages_by_pelican/</url>
+    <content><![CDATA[<p>##介绍<br>pelican是基于python的静态web站点生成器，由python编写<br>目前最火热的静态站点利器jekyll则由ruby编写，出于对python的爱，我于是选择用pelican</p>
+<ul>
+<li>文档详见<a href="http://docs.getpelican.com/" target="_blank" rel="noopener">pelican</a>，本文基于pelican 3.5.0版本</li>
+<li><a href="https://github.com/getpelican/pelican" target="_blank" rel="noopener">源码</a></li>
+<li>特性：<ul>
+<li>支持markdown，html和rst</li>
+<li>支持各种主题<a href="https://github.com/getpelican/pelican-themes" target="_blank" rel="noopener">theme</a></li>
+<li>支持插件</li>
+<li>代码高亮</li>
+</ul>
+</li>
+</ul>
+<p>##gitcafe pages<br>gitcafe pages是类似于github pages的服务，不过国内访问速度更良心</p>
+<p>###WHY gitcafe<br>github大法好，不过国内的访问速度令人蛋碎，当然，如果是海外党，可能恰好相反，不过如果有米，当然最好能够买一个域名，然后通过CNAME将国外和国内IP分别引导到github pages和gitcafe pages，具体做法可以参见<a href="https://ruby-china.org/topics/18084" target="_blank" rel="noopener">该文</a></p>
+<p>##QuickStart</p>
+<ol>
+<li><p>在centos 7下，首先安装python，pip，virtualenv（可选,virtualenv可以将各种库，插件和主题打包到一起，比较方便）</p>
+<pre><code>yum install -y python python-devel python-libs python-pip</code></pre></li>
+<li><p>随后安装pelican和markdown库，如果需要建立虚拟环境(virtualenv)，则可以参见<a href="https://virtualenv.pypa.io/en/latest" target="_blank" rel="noopener">该文</a></p>
+<pre><code>pip install pelican markdown </code></pre></li>
+<li><p>建立一个存放博客的目录，并进入目录，取名’waaagh’（绿皮万岁)</p>
+<pre><code>mkdir -p waaagh
+cd waaagh</code></pre></li>
+<li><p>QuickStart，运行：<br><code>pelican-quickstart</code>，根据提示，可以快速生成一个静态页面的生产环境，例如:（输入不支持backspace键，不过输入错误可以在随后生成的<code>pelicanconf.py</code>文件中修改，直接按回车则是取默认值）</p>
+</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">(blog)[root@localhost waaagh]# pelican-quickstart </span><br><span class="line">Welcome to pelican-quickstart v3.5.0.</span><br><span class="line">        </span><br><span class="line">This script will help you create a new Pelican-based website.</span><br><span class="line">        </span><br><span class="line">Please answer the following questions so this script can generate the files</span><br><span class="line">needed by Pelican.</span><br><span class="line">        </span><br><span class="line">            </span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Where <span class="keyword">do</span> you want to create your new web site? [.] .</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What will be the title of this web site? waaagh!!!</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Who will be the author of this web site? lichaoran</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What will be the default language of this web site? [en] zh</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to specify a URL prefix? e.g., http://example.com   (Y/n) yes</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to specify a URL prefix? e.g., http://example.com   (Y/n) yes</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What is your URL prefix? (see above example; no trailing slash) pkking</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to <span class="built_in">enable</span> article pagination? (Y/n) y</span></span><br><span class="line">  How many articles per page do you want? [10] </span><br><span class="line">▽ Do you want to generate a Fabfile/Makefile to automate generation and publishing? (Y/n) y</span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want an auto-reload &amp; simpleHTTP script to assist with theme and site development? (Y/n) y</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using FTP? (y/N) n</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using SSH? (y/N) y</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What is the hostname of your SSH server? [localhost] </span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What is the port of your SSH server? [22] </span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> What is your username on that server? [root] pkking</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Where <span class="keyword">do</span> you want to put your web site on that server? [/var/www] </span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using Dropbox? (y/N) n</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using S3? (y/N) n</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using Rackspace Cloud Files? (y/N) n</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Do you want to upload your website using GitHub Pages? (y/N) y</span></span><br><span class="line"><span class="meta">&gt;</span><span class="bash"> Is this your personal page (username.github.io)? (y/N) </span></span><br><span class="line">  Done. Your new project is available at /root/blog/blog</span><br><span class="line">``` </span><br><span class="line"></span><br><span class="line">完成后，目录结构如下：</span><br><span class="line">    </span><br><span class="line">     yourproject/</span><br><span class="line">    ├── content</span><br><span class="line">    │   └── (pages)</span><br><span class="line">    ├── output</span><br><span class="line">    ├── develop_server.sh</span><br><span class="line">    ├── fabfile.py</span><br><span class="line">    ├── Makefile</span><br><span class="line">    ├── pelicanconf.py       # Main settings file</span><br><span class="line">    └── publishconf.py       # Settings to use when ready to publish</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment">#push一篇博文</span></span></span><br><span class="line">通常，我们将content目录作为存放文章源文件的目录，pelican支持rst，markdown和html文件。</span><br><span class="line">不管3721，先撸一篇markdown文章吧：</span><br><span class="line"></span><br><span class="line">```markdown</span><br><span class="line">    Title: 我的第一发博客</span><br><span class="line">    Date: 2015-01-01 </span><br><span class="line">    Category: Python</span><br><span class="line">    Tags: pelican, publishing</span><br><span class="line">    Slug: 第一篇博客</span><br><span class="line">    Authors: lichaoran</span><br><span class="line">    Summary: Hello World</span><br><span class="line">    </span><br><span class="line">    hello world!</span><br></pre></td></tr></table></figure>
+
+<p>接下来，解释一下上面的文件内容：</p>
+<ul>
+<li>以:隔开的key-value键值对可以成为元素局（metadata），他们构成了一些文章的基础属性，例如日期，标题，摘要等，具体的元数据可以参看pelican文档</li>
+<li>正文和metadata以空行隔开</li>
+</ul>
+<p>写好文章后，将其命名为hello_world.md（.md为markdown源文件的后缀名），然后在project根目录运行<code>pelican /path/to/your/content/ [-s path/to/your/settings.py]</code>，其中，<code>/path/to/your/content</code>即是存放文章源文件的目录，刚才我们使用了content目录，该目录的名称可以在<code>pelicanconf.py</code>中配置，甚至，输出目录<code>output</code>都可以用其他配置文件代替，配置文件<code>pelicanconf.py</code>也可以是其他的配置文件，只需要指定<code>path/to/your/settings.py</code>即可。</p>
+<p><strong>TIPS</strong>:<br>写好文章后，利用刚才的命令，就已经生成好页面到<code>output</code>目录了，这时可以利用<code>make serve</code>命令启动一个本地服务器，通过访问<code>localhost.com:8000</code>来访问生成的页面</p>
+<p>##主题<br>pelican支持各种主题，<a href="http://pelicanthemes.com/" target="_blank" rel="noopener">这里</a>有各种主题及其下载链接，主题的安装和配置可以使用<code>pelican-theme</code>工具，具体方法参见<code>pelican-theme --help</code></p>
+<p>##配置pelican<br>配置文件<code>pelicanconf.py</code>包括了众多选项，可以参见<a href="http://docs.getpelican.com/en/3.5.0/settings.html" target="_blank" rel="noopener">该页</a>进行配置</p>
+<p>##git端的配置<br>在生成好第一篇文章后，可以进入到<code>output</code>目录，这里的内容就是即将托管到<code>gitcafe pages</code>的静态页面，首先，到gitcafe.com建立一个user pages或者project pages，方法参见<a href="https://gitcafe.com/GitCafe/Help/wiki/Pages-%E7%9B%B8%E5%85%B3%E5%B8%AE%E5%8A%A9#wiki" target="_blank" rel="noopener">官方帮助文档</a>，简化下来的步骤就是：</p>
+<ol>
+<li>在gitcafe.com中建立一个和用户名相同的repo</li>
+<li>根据刚建立的空repo首页，将git username和email配置为相应的数据（在github中，非验证邮箱和用户名会导致pages build failure，不知道gitcafe是否有一样的机制）</li>
+<li>在<code>output</code>目录，依次运行</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">git init #初始化仓库</span><br><span class="line">git checkout -b gitcafe-pages #建立制定分支，pages只会渲染该分支中的页面</span><br><span class="line">git add -A #添加修改</span><br><span class="line">git commit -m"init the blog" #提交</span><br><span class="line">git remote add gitcafe git@gitcafe.com:pkking/pkking.git #pkking替换为你的gitcafe用户名</span><br><span class="line">git push gitcafe gitcafe-pages #将提交push到gitcafe</span><br></pre></td></tr></table></figure>
+<ol>
+<li>OK，一切就绪，访问pkking.gitcafe.io查看渲染好的页面吧</li>
+</ol>
+]]></content>
+      <tags>
+        <tag>python</tag>
+        <tag>pelican</tag>
+        <tag>gitcafe</tag>
+        <tag>博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Yocto源码分析</title>
+    <url>/blog/2015/03/11/yocto/</url>
+    <content><![CDATA[<h2 id="server如何运作"><a href="#server如何运作" class="headerlink" title="server如何运作"></a>server如何运作</h2><p>在<code>bb/server/process.py</code>中，定义了当Yocto采用多进程<code>B/S</code>架构时，<code>server</code>进程的启动方式：</p>
+<ul>
+<li><code>start_server()</code>，在<code>bin/bitbake</code>中，包含了一个<code>start_server()</code>函数，该函数根据命令行参数，实例化相应的<code>server</code>对象，并且调用<code>server</code>的<code>detach</code>函数，这个函数则调用了<code>server</code>对象的<code>start()</code>函数</li>
+<li><code>run()</code>:在<code>bb.server.ProcessServer</code>类中，存在一个<code>run</code>函数，该函数设置了一些UI事件，并且调用了<code>bb.cooker.server_main()</code>，该函数接受两个参数，第一个是一个cooker实例，第二个是一个可执行的函数，Yocto中将<code>self.cooker</code>和<code>self.main</code>作为这两个参数，由于<code>ProcessServer</code>类继承于<code>Process</code>类，因此在调用该类的<code>start()</code>方法时，<code>run()</code>会被自动调用，因此在调用<code>server.start()</code>时，实际调用的是<code>server_main()</code>函数</li>
+<li><code>server_main()</code>:该函数执行一些预处理任务（<code>bb.cooker.pre_serve()</code>），然后调用传进来的函数并且返回其返回值:</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#__file__ = 'bitbake/lib/bb/cooker.py'</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">server_main</span><span class="params">(cooker, func, *args)</span>:</span></span><br><span class="line">    cooker.pre_serve()</span><br><span class="line">    <span class="comment">#something else</span></span><br><span class="line">    ret = func(*args)</span><br><span class="line">    cooker.post_serve()</span><br><span class="line">    <span class="keyword">return</span> ret</span><br></pre></td></tr></table></figure>
+
+<p>而这里的<code>func</code>，即是上面传进来的<code>bb.server.ProcessServer.main</code>，因此调用<code>server_main()</code>实际上是调用了<code>ProcessServer</code>类的<code>main()</code>函数</p>
+<ul>
+<li><code>ProcessServer.main()</code>:该函数会执行一个重要的<code>while</code>循环：</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#__file__ = 'bitbake/lib/bb/server/process.py'</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">(self)</span>:</span></span><br><span class="line">    <span class="comment"># Ignore SIGINT within the server, as all SIGINT handling is done by</span></span><br><span class="line">    <span class="comment"># the UI and communicated to us</span></span><br><span class="line">    self.quitin.close()</span><br><span class="line">    signal.signal(signal.SIGINT, signal.SIG_IGN)</span><br><span class="line">    <span class="keyword">while</span> <span class="keyword">not</span> self.quit:</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">if</span> self.command_channel.poll(): <span class="comment"># 检测是否有命令数据</span></span><br><span class="line">                command = self.command_channel.recv()</span><br><span class="line">                self.runCommand(command)</span><br><span class="line">            <span class="keyword">if</span> self.quitout.poll():</span><br><span class="line">                self.quitout.recv()</span><br><span class="line">                self.quit = <span class="literal">True</span></span><br><span class="line">	<span class="comment"># 若无数据可读，执行注册的idle命令</span></span><br><span class="line">            self.idle_commands(<span class="number">.1</span>, [self.event_queue._reader, self.command_channel, self.quitout])</span><br><span class="line">        <span class="keyword">except</span> Exception:</span><br><span class="line">            logger.exception(<span class="string">'Running command %s'</span>, command)</span><br><span class="line"></span><br><span class="line">	self.event_queue.close()</span><br><span class="line">    bb.event.unregister_UIHhandler(self.event_handle.value)</span><br><span class="line">    self.command_channel.close()</span><br><span class="line">    self.cooker.shutdown(<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在其中不断的从两个管道中读取数据，一个管道为命令管道，这个管道两头连接着<code>ui</code>和<code>server</code>，这样server就可以接受来自<code>ui</code>的命令，并把执行结果返回给<code>ui</code>；另一个管道为异常管道，当其他模块在产生不可恢复的异常后，会向这个管道发送<code>&#39;quit&#39;</code>消息，接收到该命令后主循环直接退出；在检查完这两个管道后，主循环调用<code>idle_commands()</code>，并设置0.1秒的延时，用于等待几个管道的数据</p>
+<ul>
+<li><code>idle_commands</code>：该函数调用<code>register_idle_function</code>函数注册的<code>idle</code>函数，这个函数在<code>bb.Command.runCommand()</code>中，通过</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">self.cooker.configuration.server_register_idlecallback(self.cooker.runCommands, self.cooker)</span><br></pre></td></tr></table></figure>
+
+<p>这段代码注册，可以看到，注册的函数为<code>bb.cooker.runCommands</code>，然后该函数调用这个注册的函数，如果未找到注册函数，则调用<code>select.select()</code>等待0.1秒后返回。</p>
+<ul>
+<li><code>bb.cooker.runCommands</code>:该函数就是被注册的idle函数，他会被<code>server</code>主循环周期的调用，而该函数的实际内容，则是调用<code>bb.command.Command.runAsyncCommand</code>来执行一个已经就绪的异步命令</li>
+<li><code>bb.command.Command.runAsyncCommand</code>:该函数会判断当前cooker从状态，而分别调用<code>updateCache()</code>函数或者调用<code>command</code>对象的<code>currentAsyncCommand</code>成员函数，这个函数会在多种情况下被赋值为某个函数对象和其参数组成的元组<code>(command, options)</code>，当该函数被调用时，则会执行在<code>currentAsyncCommand</code>注册的函数，而<code>updateCache()</code>则会为启动其他的任务，例如<code>parse</code></li>
+<li><code>currentAsyncCommand</code>的赋值：<code>currentAsyncCommand</code>只会在<code>command.runCommand</code>函数中被赋值，而<code>command.runCommand</code>函数，则会在<code>server</code>对象的<code>runCommand()</code>中被调用，<code>server.runCommand()</code>的调用，则出现在<code>ui</code>端的<code>main()</code>中唯一一次主动调用<code>server</code>的代码，这样，即是在<code>ui</code>端的<code>main</code>函数中，启动了</li>
+</ul>
+<h2 id="依赖关系如何解析"><a href="#依赖关系如何解析" class="headerlink" title="依赖关系如何解析"></a>依赖关系如何解析</h2><p>代码位于<code>bb.runqueue.RunQueueData.prepare()</code>函数中的注释的<code>PART A</code>部分和内嵌函数<code>generate_recdeps</code></p>
+<h2 id="bb文件如何解析"><a href="#bb文件如何解析" class="headerlink" title="bb文件如何解析"></a>bb文件如何解析</h2><p>入口位于<code>bb.cooker.updateCache()</code>函数中，该函数中有如下代码：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">self.parser = CookerParser(self, filelist, masked)</span><br></pre></td></tr></table></figure>
+
+<p>这段代码初始化了一个<code>CookerParser</code>对象，这个对象的构造函数中，调用了<code>self.start()</code>，因此这段代码直接启动了bb文件的解析，具体的<code>start()</code>函数代码在<code>bb/cooker.py</code>中的<code>CookerParser</code>类中</p>
+<h2 id="UI端如何运作"><a href="#UI端如何运作" class="headerlink" title="UI端如何运作"></a>UI端如何运作</h2><p>由于在Yocto中，服务进程先于UI启动，因此第一次执行命令需要通过<code>ui</code>传递给<code>server</code>，而<code>ui</code>的入口函数，则是位于<code>lib/ui/ui_module_name.py</code>文件中的<code>main()</code>函数，根据采用的不同的<code>ui</code>模块（默认采用knotty.py），<code>main</code>函数有不同的行为，这里以knotty.py中的main作为例子进行分析</p>
+<ul>
+<li><code>bb.ui.knotty.main</code> 这个函数为<code>ui</code>端的入口函数，最核心的代码为</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#__file__ = 'bitbake/lib/bb/ui/knotty.py'</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> <span class="keyword">not</span> params.observe_only:</span><br><span class="line">       params.updateFromServer(server)</span><br><span class="line">       params.updateToServer(server)</span><br><span class="line">       cmdline = params.parseActions()</span><br><span class="line">       <span class="keyword">if</span> <span class="keyword">not</span> cmdline:</span><br><span class="line">           print(<span class="string">"Nothing to do.  Use 'bitbake world' to build everything, or</span></span><br><span class="line"><span class="string">            run 'bitbake --help' for usage information."</span>)</span><br><span class="line">           <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">       <span class="keyword">if</span> <span class="string">'msg'</span> <span class="keyword">in</span> cmdline <span class="keyword">and</span> cmdline[<span class="string">'msg'</span>]:</span><br><span class="line">           logger.error(cmdline[<span class="string">'msg'</span>])</span><br><span class="line">           <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line">       ret, error = server.runCommand(cmdline[<span class="string">'action'</span>])</span><br><span class="line">       <span class="keyword">if</span> error:</span><br><span class="line">           logger.error(<span class="string">"Command '%s' failed: %s"</span> % (cmdline, error))</span><br><span class="line">           <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">       <span class="keyword">elif</span> ret != <span class="literal">True</span>:</span><br><span class="line">           logger.error(<span class="string">"Command '%s' failed: returned %s"</span> % (cmdline, ret))</span><br><span class="line">           <span class="keyword">return</span> <span class="number">1</span></span><br></pre></td></tr></table></figure>
+
+<p>这段代码，通过<code>params.parseActions()</code>从用户调用的<code>bitbake &lt;target&gt;</code>命令，解析出一个<code>cmdline</code>字典，其中的<code>action</code>键是一个列表，其中包含了要运行的命令的字符串格式，要构建的目标<code>&lt;target&gt;</code>和构建的cmd（默认为<code>build</code>），例如:<code>cmdline[action]=[&quot;buildTarget&quot;, &quot;zlib&quot;, &quot;build&quot;]</code>，就意味着即将要运行的命令为<code>buildTarget</code>，构建目标为<code>zlib</code>，cmd为<code>build</code>；而<code>msg</code>键对应了需要传送给<code>server</code>端显示的消息，当命令行参数解析到不合适的内容时，则会发送给服务器结束命令，关闭<code>ui</code>和<code>server</code>进程。<br>    如果没有出错，通常的第一个<code>action</code>都是<code>buildTarget</code>，这个<code>action</code>随后被作为参数，传给<code>bb.server.ServerCommunicator.runCommand()</code>函数，该函数调用服务端的函数<code>bb.server.ProcessServer.runCommand</code>来执行命令</p>
+<ul>
+<li><p><code>bb.server.ProcessServer.runCommand</code>:该函数将上面<code>action</code>中的命令数据通过<code>bb.cooker.command.runCommand()</code>进行处理，并将返回值通过管道发送给<code>ui</code>端，这也是唯一一次<code>ui</code>端显式的调用<code>server</code>的函数。</p>
+</li>
+<li><p>各种event的处理：在<code>bb.ui.knotty.main()</code>中，存在着一个<code>while</code>循环，该循环读取服务端的管道，并根据服务端返回的命令执行结果和状态执行相应的代码，或者关闭服务端，或者继续发送命令。</p>
+</li>
+</ul>
+<h2 id="buildTarget"><a href="#buildTarget" class="headerlink" title="buildTarget"></a>buildTarget</h2><p>在 <code>bitbake/bb/cooker.py</code>中，有一个<code>buildTarget</code>函数，该函数为在无任何参数的<code>bitbake</code>命令时的服务端入口，例如:</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> bitbake zlib <span class="comment">#target 为 zlib</span></span></span><br></pre></td></tr></table></figure>
+
+<p>这是服务端会调用<code>buildTarget</code>作为如何，该函数如下:</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">buildTargets</span><span class="params">(self, targets, task)</span>:</span></span><br><span class="line">     <span class="string">"""</span></span><br><span class="line"><span class="string">    Attempt to build the targets specified</span></span><br><span class="line"><span class="string">    """</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">buildTargetsIdle</span><span class="params">(server, rq, abort)</span>:</span></span><br><span class="line">        msg = <span class="literal">None</span></span><br><span class="line">        <span class="keyword">if</span> abort <span class="keyword">or</span> self.state == state.forceshutdown:</span><br><span class="line">            rq.finish_runqueue(<span class="literal">True</span>)</span><br><span class="line">            msg = <span class="string">"Forced shutdown"</span></span><br><span class="line">        <span class="keyword">elif</span> self.state == state.shutdown:</span><br><span class="line">            rq.finish_runqueue(<span class="literal">False</span>)</span><br><span class="line">            msg = <span class="string">"Stopped build"</span></span><br><span class="line">        failures = <span class="number">0</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            retval = rq.execute_runqueue()</span><br><span class="line">        <span class="keyword">except</span> runqueue.TaskFailure <span class="keyword">as</span> exc:</span><br><span class="line">            failures += len(exc.args)</span><br><span class="line">            retval = <span class="literal">False</span></span><br><span class="line">        <span class="keyword">except</span> SystemExit <span class="keyword">as</span> exc:</span><br><span class="line">            self.command.finishAsyncCommand()</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> retval:</span><br><span class="line">            bb.event.fire(bb.event.BuildCompleted(len(rq.rqdata.runq_fnid), </span><br><span class="line">                buildname, targets, failures), self.data)</span><br><span class="line">            self.command.finishAsyncCommand(msg)</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">        <span class="keyword">if</span> retval <span class="keyword">is</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">        <span class="keyword">return</span> retval</span><br><span class="line"></span><br><span class="line">    self.buildSetVars()</span><br><span class="line"></span><br><span class="line">    taskdata, runlist, fulltargetlist = self.buildTaskData(targets, task, self.configuration.abort)</span><br><span class="line"></span><br><span class="line">    buildname = self.data.getVar(<span class="string">"BUILDNAME"</span>)</span><br><span class="line">    bb.event.fire(bb.event.BuildStarted(buildname, fulltargetlist), self.data)</span><br><span class="line"></span><br><span class="line">    rq = bb.runqueue.RunQueue(self, self.data, self.recipecache, taskdata, runlist)</span><br><span class="line">    <span class="keyword">if</span> <span class="string">'universe'</span> <span class="keyword">in</span> targets:</span><br><span class="line">        rq.rqdata.warn_multi_bb = <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    self.configuration.server_register_idlecallback(buildTargetsIdle, rq)</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，这个函数做了以下几件事：</p>
+<ol>
+<li>定义了一个内嵌函数<code>buildTargetsIdle</code>，看名字可以得知，该内嵌函数会作为<code>idle</code>函数被注册到<code>server</code>中，周期的被调用</li>
+<li><code>self.buildSetVars()</code>用于设置一些和<code>BUILDNAME</code>,<code>BUILDTIME</code>等变量</li>
+<li><code>buildTaskData</code>用于生成任务数据，其中包括<code>taskdata</code>，<code>runlist</code>，和<code>fulltargetlist</code>；其中，<code>taskdata</code>是一个<code>bb.taskdata.TaskData</code>类的实例，这个对象中包含了和该任务相关的信息，例如依赖，任务名等，<code>runlist</code>则是该任务的各个目标的名称和对应的task，并以列表的形式进行存储，例如<code>[&quot;base-files&quot;,&quot;do_build&quot;]</code>就代表了目标<code>base-files</code>，其task为<code>do_build</code>，而<code>fulltargetlist</code>则是所有target的列表</li>
+<li>通过<code>rq = bb.runqueue.RunQueue(self, self.data, self.recipecache, taskdata, runlist)</code>来构造一个<code>RunQueue</code>实例，为随后的build工作做好准备</li>
+<li>将定义的内嵌函数注册为<code>idle</code>回调函数，使其被周期地调用，因此，我们需要分析该函数的实现：</li>
+</ol>
+<h3 id="buildTargetsIdle"><a href="#buildTargetsIdle" class="headerlink" title="buildTargetsIdle"></a>buildTargetsIdle</h3><ol>
+<li><p>根据上面的代码，该函数主要执行了<code>rq.execute_runqueue()</code>函数，该函数位于<code>bb/runqueue.py</code>中，而<code>execute_runqueue()</code>又调用了<code>_execute_runqueue()</code>，而<code>_execute_runqueue()</code>的实际工作，是根据<code>runqueue</code>的实际状态，进行不同的行为：</p>
+<ul>
+<li>在<code>runQueuePrepare</code>态，调用<code>bb.runqueue.RunQueueData.prepare()</code>，这个函数是很相当长的函数，主要行为包括：<ol>
+<li>STEP A:解析出一个需要执行的任务列表，包括解析依赖</li>
+<li>STEP B:标记所有需要执行的任务</li>
+<li>STEP C:去掉不需要执行的任务</li>
+<li>STEP D:检测并确定最终的需要执行的任务列表</li>
+<li>进入<code>runQueueSceneInit</code>状态</li>
+</ol>
+</li>
+<li>在<code>runQueueSceneInit</code>状态，调用<code>runqueue.start_worker()</code>启动，启动工作进程，并构建一个<code>RunQueueExecuteScenequeue</code>对象，将状态设置为<code>runQueueSceneRun</code></li>
+<li>在<code>runQueueSceneRun</code>状态，调用<code>RunQueueExecuteScenequeue.execute()</code>，该函数会将准备好的task依次运行，随后，将状态设置为<code>runQueueRunInit</code></li>
+<li>在<code>runQueueRunInit</code>状态，会构造一个<code>RunQueueExecuteTasks</code>对象，然后将状态设置为<code>runQueueRunning</code></li>
+<li>在<code>runQueueRunning</code>状态，会调用<code>RunQueueExecuteTasks</code>对象的<code>execute()</code>函数，该函数会执行在上面的<code>RunQueueData</code>状态中准备的task，并进入<code>runQueueCleanUp</code>状态</li>
+<li><code>runQueueCleanUp</code>状态，调用<code>RunQueueExecute.finish()</code>函数，并将状态设置为<code>runQueueComplete</code></li>
+<li><code>runQueueComplete</code>状态，销毁worker，然后该函数返回</li>
+</ul>
+</li>
+</ol>
+<h2 id="载入cache的入口"><a href="#载入cache的入口" class="headerlink" title="载入cache的入口"></a>载入cache的入口</h2><p>入口函数是<code>bb/cache.py</code>中的<code>load_cachefile()</code>函数</p>
+<h2 id="run-do-xxx-脚本如何生成"><a href="#run-do-xxx-脚本如何生成" class="headerlink" title="run.do_xxx 脚本如何生成"></a>run.do_xxx 脚本如何生成</h2><p>在<code>bb/build.py</code>中，存在<code>exec_func</code>函数，该函数运行的某个函数，将会在<code>build/tmp/work</code>中创建<code>run.do_xxx.pid</code>名称的脚本，并运行它</p>
+<h2 id="如何生成image"><a href="#如何生成image" class="headerlink" title="如何生成image"></a>如何生成image</h2><p>yocto在构建完成所有的软件包后，会将所有构建的软件包放在<code>${TMPDIR}/deploy</code>目录下，称之为软件源，在启动构建rootfs的活动（名为<code>do_rootfs</code>的task）后，将会执行三个函数：</p>
+<ul>
+<li>create_manifest() 构建软件包的manifest用于test image，并且生成一个<code>package</code>列表为<code>create_rootfs()</code>函数提供需要安装的软件包列表</li>
+<li>create_rootfs() 构建rootfs文件系统，包括执行<code>pre_cmd</code>，安装所需软件包，构建/etc ,/dev等目录，构建内核模块，运行ldconfig等，完成rootfs的构建</li>
+<li>create_image 根据image的压缩类型和文件系统类型，制作一个或多个image</li>
+</ul>
+]]></content>
+      <tags>
+        <tag>python</tag>
+        <tag>Yocto</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在openEuler中搭建i3wm</title>
+    <url>/blog/2023/03/18/i3wm_in_openeuler/</url>
+    <content><![CDATA[<h2 id="什么是i3"><a href="#什么是i3" class="headerlink" title="什么是i3"></a>什么是i3</h2><p>一个<a href="https://en.wikipedia.org/wiki/Tiling_window_manager">平铺式窗口管理器</a><br>就像emacs一样，在习惯使用的人手里，i3可以是一个及其有效率的生产力工具<br>一个介绍视频 <a href="https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&vd_source=78e28bd49f69d106107f568dc1fa8295">https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295</a></p>
+<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/blog/layout.jpeg"></p>
+<h2 id="相关软件（包）"><a href="#相关软件（包）" class="headerlink" title="相关软件（包）"></a>相关软件（包）</h2><p><a href="https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/">i3wm</a><br><a href="https://code.visualstudio.com/docs/setup/linux">vscode</a><br><a href="https://github.com/dylanaraps/neofetch">neofetch</a><br><a href="https://gitee.com/mywaaagh_admin/i3configs">i3config</a></p>
+<h2 id="HOWTO"><a href="#HOWTO" class="headerlink" title="HOWTO"></a>HOWTO</h2><ol>
+<li><p>i3是基于X协议的，因此需要先安装X Server </p>
+ <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-server</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment)通常会包含<a href="https://wiki.archlinux.org/title/desktop_environment#Custom_environments">非常多的组件</a>，因此还需要安装一些基本组件</p>
+ <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-drv-*  lightdm lightdm-gtk</span><br></pre></td></tr></table></figure></li>
+<li><p>最后，我们安装i3相关的组件</p>
+ <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></table></figure></li>
+<li><p>安装完成后，启动<code>lightdm</code></p>
+ <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo systemctl start lightdm</span><br></pre></td></tr></table></figure>
+<p> <img src="/blog/lightdm.png"></p>
+</li>
+</ol>
+<p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mod+d：调出dmenu，用于快速启动进程</span><br><span class="line">mod+enter：启动terminal</span><br><span class="line">mod+↑/mod+↓/mod+←/mod+→：调整focus的窗口</span><br><span class="line">mod+shift+q：关闭当前focus的窗口</span><br><span class="line">mod+shift+r：热加载配置文件</span><br><span class="line">mod+shift+e：关闭i3</span><br><span class="line">mod+shift+l：锁屏</span><br></pre></td></tr></table></figure>]]></content>
+      <tags>
+        <tag>tiling window manager</tag>
+        <tag>openEuler</tag>
+        <tag>i3</tag>
+      </tags>
+  </entry>
+</search>
