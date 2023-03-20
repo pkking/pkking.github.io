@@ -2,7 +2,7 @@
 <search>
   <entry>
     <title>runc 源码分析-1 概述</title>
-    <url>/blog/2017/05/11/analysis-1/</url>
+    <url>/2017/05/11/analysis-1/</url>
     <content><![CDATA[<h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
 <ul>
 <li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
@@ -11,8 +11,8 @@
 </ul>
 <p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
 <h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
-<p>下图就是runc出现前后，docker架构的变化。</br><br><img src="/blog/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
-<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。</br><br><img src="/blog/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
+<p>下图就是runc出现前后，docker架构的变化。</br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
+<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。</br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
 <h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker&#x2F;rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
 <h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></table></figure>
@@ -30,7 +30,7 @@
   </entry>
   <entry>
     <title>关于在amd64架构下构建arm架构deb包的问题</title>
-    <url>/blog/2015/05/12/crossBuild/</url>
+    <url>/2015/05/12/crossBuild/</url>
     <content><![CDATA[<h1 id="poky-amp-yocto"><a href="#poky-amp-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
 <p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
 <h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
@@ -66,7 +66,7 @@
   </entry>
   <entry>
     <title>cs186学习-笔记1</title>
-    <url>/blog/2020/11/21/cs186-learn-1/</url>
+    <url>/2020/11/21/cs186-learn-1/</url>
     <content><![CDATA[<h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
 <p><a href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
 <h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
@@ -108,7 +108,7 @@
   </entry>
   <entry>
     <title>利用pelican和gitcafe搭建博客</title>
-    <url>/blog/2015/02/18/how_to_build_gitcafe_pages_by_pelican/</url>
+    <url>/2015/02/18/how_to_build_gitcafe_pages_by_pelican/</url>
     <content><![CDATA[<p>##介绍<br>pelican是基于python的静态web站点生成器，由python编写<br>目前最火热的静态站点利器jekyll则由ruby编写，出于对python的爱，我于是选择用pelican</p>
 <ul>
 <li>文档详见<a href="http://docs.getpelican.com/">pelican</a>，本文基于pelican 3.5.0版本</li>
@@ -186,9 +186,9 @@
   </entry>
   <entry>
     <title>在openEuler中搭建i3wm</title>
-    <url>/blog/2023/03/17/i3wm_in_openeuler/</url>
+    <url>/2023/03/17/i3wm_in_openeuler/</url>
     <content><![CDATA[<h2 id="什么是i3"><a href="#什么是i3" class="headerlink" title="什么是i3"></a>什么是i3</h2><p>一个<a href="https://en.wikipedia.org/wiki/Tiling_window_manager">平铺式窗口管理器</a><br>就像emacs一样，在习惯使用的人手里，i3可以是一个及其有效率的生产力工具<br>一个介绍视频 <a href="https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&vd_source=78e28bd49f69d106107f568dc1fa8295">https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295</a></p>
-<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/blog/layout.jpeg"></p>
+<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/layout.jpeg"></p>
 <h2 id="相关软件（包）"><a href="#相关软件（包）" class="headerlink" title="相关软件（包）"></a>相关软件（包）</h2><p><a href="https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/">i3wm</a><br><a href="https://code.visualstudio.com/docs/setup/linux">vscode</a><br><a href="https://github.com/dylanaraps/neofetch">neofetch</a><br><a href="https://gitee.com/mywaaagh_admin/i3configs">i3config</a></p>
 <h2 id="HOWTO"><a href="#HOWTO" class="headerlink" title="HOWTO"></a>HOWTO</h2><ol>
 <li><p>i3是基于X协议的，因此需要先安装X Server </p>
@@ -200,7 +200,7 @@
  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></table></figure></li>
 <li><p>安装完成后，启动<code>lightdm</code></p>
  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo systemctl start lightdm</span><br></pre></td></tr></table></figure>
-<p> <img src="/blog/lightdm.png"></p>
+<p> <img src="/lightdm.png"></p>
 </li>
 </ol>
 <p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
@@ -213,7 +213,7 @@
   </entry>
   <entry>
     <title>Manacher 算法求最长回文子串</title>
-    <url>/blog/2017/07/31/manacher/</url>
+    <url>/2017/07/31/manacher/</url>
     <content><![CDATA[<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>本文来源于<code>leetcode</code>上的一道求最长回文子串的<a href="https://leetcode.com/problems/longest-palindromic-substring">中级算法题</a></p>
 <h1 id="先来个思路"><a href="#先来个思路" class="headerlink" title="先来个思路"></a>先来个思路</h1><p>由回文的性质想到，从回文的对称轴向两边同时扩张，在回文半径内，两边的字符一定是相同的。</br><br>因此，我们是否可以从左向右依次遍历字符串，用扩展的方法来找出所有的回文串，并记录最长的那一个呢?</br><br>说干就干，经过几次WA，终于AC了，代码如下：</p>
 <figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> &#123;</span><br><span class="line">    i, j, max, current_len := <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span></span><br><span class="line">    <span class="keyword">var</span> longest <span class="type">string</span></span><br><span class="line">    n := <span class="built_in">len</span>(s)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i = <span class="number">0</span>; i &lt; n; i++ &#123;</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j &lt; n; j++ &#123; <span class="comment">// if the length of the palindrome is odd  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j] &#123;</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max &#123;</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j]</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j + <span class="number">1</span> &lt; n; j++ &#123; <span class="comment">// for the even case  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j + <span class="number">1</span>] &#123;</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            &#125;</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">2</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max &#123;</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j + <span class="number">1</span>]</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> longest;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -230,11 +230,11 @@
 <li>当前的字符处于已经被遍历过的字符串</li>
 </ol>
 <p>对于情况<code>1</code>，由于没有历史数据可以借鉴，因此只能直接重新通过双向扩展来求回文半径</br><br>而对于情况<code>2</code>，如果我们不利用已经遍历过的回文的性质，那么算法就会和一开始的暴力遍历法一样低效，因此，这里需要仔细考虑如何利用回文性质快速求出会问半径<code>p[i]</code></br></p>
-<h3 id="利用历史数据快速求解回文半径"><a href="#利用历史数据快速求解回文半径" class="headerlink" title="利用历史数据快速求解回文半径"></a>利用历史数据快速求解回文半径</h3><p>假设之前已遍历的回文子串能延伸到达的最远位置为<code>max</code>，其所对应的对称轴为<code>id</code>，那么，对于上文的情况<code>2</code>，当前的字符<code>c</code>一定位于<code>max</code>的左边，并且可以利用回文的性质，通过<code>c</code>关于<code>id</code>的对称点<code>j</code>来求<code>p[i]</code></br><br><img src="/blog/images/manacher-1.png" alt="situation 2"></p>
+<h3 id="利用历史数据快速求解回文半径"><a href="#利用历史数据快速求解回文半径" class="headerlink" title="利用历史数据快速求解回文半径"></a>利用历史数据快速求解回文半径</h3><p>假设之前已遍历的回文子串能延伸到达的最远位置为<code>max</code>，其所对应的对称轴为<code>id</code>，那么，对于上文的情况<code>2</code>，当前的字符<code>c</code>一定位于<code>max</code>的左边，并且可以利用回文的性质，通过<code>c</code>关于<code>id</code>的对称点<code>j</code>来求<code>p[i]</code></br><br><img src="/images/manacher-1.png" alt="situation 2"></p>
 <p>因此，我们可以看到，回文半径的求解，分为以下几个情况：</p>
 <ol>
-<li><code>j</code>的回文包含在<code>id</code>的回文内</br><br><img src="/blog/images/manacher-3.png" alt="c bettween 0 and max"></br><br>这种情况下，<code>p[i] = p[j] = p[2*id - i]</code>且<code>p[i] &lt; max - i</code></li>
-<li><code>j</code>的回文包含在<code>id</code>的回文外</br><br><img src="/blog/images/manacher-2.png" alt="c is partly out of max"></br><br>这种情况下，<code>j</code>的回文半径已经超出了<code>id</code>的半径，因此，我们需要推断<code>i</code>的回文半径是否也会超出</br><br>结论是：不会！</br><br>原因：假如<code>j</code>的回文包含<code>a</code>和<code>b</code>，且<code>b</code>等于<code>c</code>（<code>b</code>，<code>c</code>关于<code>id</code>对称），那么如果<code>i</code>的回文超过了<code>max</code>，则超过<code>max</code>的部分必定和<code>j</code>超出<code>id</code>左边回文半径有部分相等，这样，就会导致<code>id</code>的回文半径超出<code>max</code>，和已知条件矛盾，因此这是不可能的</br><br>此时，<code>p[i] = max - i</code></li>
+<li><code>j</code>的回文包含在<code>id</code>的回文内</br><br><img src="/images/manacher-3.png" alt="c bettween 0 and max"></br><br>这种情况下，<code>p[i] = p[j] = p[2*id - i]</code>且<code>p[i] &lt; max - i</code></li>
+<li><code>j</code>的回文包含在<code>id</code>的回文外</br><br><img src="/images/manacher-2.png" alt="c is partly out of max"></br><br>这种情况下，<code>j</code>的回文半径已经超出了<code>id</code>的半径，因此，我们需要推断<code>i</code>的回文半径是否也会超出</br><br>结论是：不会！</br><br>原因：假如<code>j</code>的回文包含<code>a</code>和<code>b</code>，且<code>b</code>等于<code>c</code>（<code>b</code>，<code>c</code>关于<code>id</code>对称），那么如果<code>i</code>的回文超过了<code>max</code>，则超过<code>max</code>的部分必定和<code>j</code>超出<code>id</code>左边回文半径有部分相等，这样，就会导致<code>id</code>的回文半径超出<code>max</code>，和已知条件矛盾，因此这是不可能的</br><br>此时，<code>p[i] = max - i</code></li>
 </ol>
 <p>综上所述，当<code>p[i] &lt; max - i</code>时，<code>p[i] = p[2*id - i]</code>，而<code>p[i] == max - i</code>时，<code>p[i] == max - i</code>，因此可以得到，&#96;p[i] &#x3D; min(max - i, p[2*id - i])</p>
 <h2 id="最后，上代码"><a href="#最后，上代码" class="headerlink" title="最后，上代码"></a>最后，上代码</h2><figure class="highlight go"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">min</span><span class="params">(a, b <span class="type">int</span>)</span></span> <span class="type">int</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> a &gt; b &#123; </span><br><span class="line">        <span class="keyword">return</span> b</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> &#123;</span><br><span class="line">    tmp := <span class="string">&quot;#&quot;</span> + strings.Join(strings.Split(s,<span class="string">&quot;&quot;</span>),<span class="string">&quot;#&quot;</span>) + <span class="string">&quot;#&quot;</span> </span><br><span class="line">    id, l, max, maxlen, mxpos := <span class="number">0</span>, <span class="built_in">len</span>(tmp), <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">    p := <span class="built_in">make</span>([]<span class="type">int</span>, l)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i:=<span class="number">0</span>; i&lt;l; i++ &#123;</span><br><span class="line">        <span class="keyword">if</span> max &gt; i &#123;</span><br><span class="line">            p[i] = min(p[<span class="number">2</span>*id - i], max - i)</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; </span><br><span class="line">            p[i] = <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> ;i &gt;= p[i] &amp;&amp; i + p[i] &lt; l &amp;&amp; tmp[i-p[i]] == tmp[i+p[i]]; &#123;</span><br><span class="line">            p[i] += <span class="number">1</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> p[i] + i &gt; max &#123; </span><br><span class="line">            max  = p[i] + i</span><br><span class="line">            id = i</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> maxlen &lt; p[i] &#123;</span><br><span class="line">            maxlen = p[i]</span><br><span class="line">            mxpos = i</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> s[(mxpos+<span class="number">1</span>-maxlen)/<span class="number">2</span>:(mxpos<span class="number">-1</span>+maxlen)/<span class="number">2</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -252,7 +252,7 @@
   </entry>
   <entry>
     <title>Yocto源码分析</title>
-    <url>/blog/2015/03/11/yocto/</url>
+    <url>/2015/03/11/yocto/</url>
     <content><![CDATA[<h2 id="server如何运作"><a href="#server如何运作" class="headerlink" title="server如何运作"></a>server如何运作</h2><p>在<code>bb/server/process.py</code>中，定义了当Yocto采用多进程<code>B/S</code>架构时，<code>server</code>进程的启动方式：</p>
 <ul>
 <li><code>start_server()</code>，在<code>bin/bitbake</code>中，包含了一个<code>start_server()</code>函数，该函数根据命令行参数，实例化相应的<code>server</code>对象，并且调用<code>server</code>的<code>detach</code>函数，这个函数则调用了<code>server</code>对象的<code>start()</code>函数</li>
