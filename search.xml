@@ -188,7 +188,7 @@
     <title>在openEuler中搭建i3wm</title>
     <url>/2023/03/17/i3wm_in_openeuler/</url>
     <content><![CDATA[<h2 id="什么是i3"><a href="#什么是i3" class="headerlink" title="什么是i3"></a>什么是i3</h2><p>一个<a href="https://en.wikipedia.org/wiki/Tiling_window_manager">平铺式窗口管理器</a><br>就像emacs一样，在习惯使用的人手里，i3可以是一个及其有效率的生产力工具<br>一个介绍视频 <a href="https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&vd_source=78e28bd49f69d106107f568dc1fa8295">https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295</a></p>
-<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/layout.jpeg"></p>
+<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/2023/03/17/i3wm_in_openeuler/layout.jpeg"></p>
 <h2 id="相关软件（包）"><a href="#相关软件（包）" class="headerlink" title="相关软件（包）"></a>相关软件（包）</h2><p><a href="https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/">i3wm</a><br><a href="https://code.visualstudio.com/docs/setup/linux">vscode</a><br><a href="https://github.com/dylanaraps/neofetch">neofetch</a><br><a href="https://gitee.com/mywaaagh_admin/i3configs">i3config</a></p>
 <h2 id="HOWTO"><a href="#HOWTO" class="headerlink" title="HOWTO"></a>HOWTO</h2><ol>
 <li><p>i3是基于X协议的，因此需要先安装X Server </p>
@@ -200,7 +200,7 @@
  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></table></figure></li>
 <li><p>安装完成后，启动<code>lightdm</code></p>
  <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">sudo systemctl start lightdm</span><br></pre></td></tr></table></figure>
-<p> <img src="/lightdm.png"></p>
+<p> <img src="/2023/03/17/i3wm_in_openeuler/lightdm.png"></p>
 </li>
 </ol>
 <p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
