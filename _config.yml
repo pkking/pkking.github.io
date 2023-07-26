@@ -108,3 +108,14 @@ search:
   field: post
   content: true
   format: html
+
+githubEmojis:
+  enable: true
+  className: github-emoji
+  unicode: true
+  styles:
+    display: inline
+    vertical-align: middle # Freemind适用
+  localEmojis:
+  customEmojis:
+  inject: true
