@@ -356,6 +356,12 @@
 <p>将<a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/files/11423539/styles.csv">style.csv</a>放到代码根目录，然后重启项目即可</p>
 <p>这样在style下拉菜单就能看到各种<code>style</code>了</p>
 <p><img src="/2023/08/29/stable-diffusion-webui/image.png" alt="Alt text"></p>
+<h2 id="screenshot"><a href="#screenshot" class="headerlink" title="screenshot"></a>screenshot</h2><p>prompt</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">photo of a male warrior, modelshoot style, (extremely detailed CG unity 8k wallpaper), full shot body photo of the most beautiful artwork in the world, medieval armor, professional majestic oil painting by Ed Blinkey, Atey Ghailan, Studio Ghibli, by Jeremy Mann, Greg Manchess, Antonio Moro, trending on ArtStation, trending on CGSociety, Intricate, High Detail, Sharp focus, dramatic, photorealistic painting art by midjourney and greg rutkowski</span><br></pre></td></tr></tbody></table></figure>
+<p>neg prompt</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">canvas frame, cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)),((extra limbs)),((close up)),((b&amp;w)), weird colors, blurry, (((duplicate))), ((morbid)), ((mutilated)), [out of frame], extra fingers, mutated hands, ((poorly drawn hands)), ((poorly drawn face)), (((mutation))), (((deformed))), ((ugly)), blurry, ((bad anatomy)), (((bad proportions))), ((extra limbs)), cloned face, (((disfigured))), out of frame, ugly, extra limbs, (bad anatomy), gross proportions, (malformed limbs), ((missing arms)), ((missing legs)), (((extra arms))), (((extra legs))), mutated hands, (fused fingers), (too many fingers), (((long neck))), Photoshop, video game, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, 3d render</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2023/08/29/stable-diffusion-webui/prompt1.png" alt="Alt text"></p>
 <h2 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h2><ul>
 <li>收集一些<code>Prompt</code>和插件</li>
 <li>调试<code>refine</code></li>

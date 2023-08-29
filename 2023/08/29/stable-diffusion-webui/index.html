@@ -28,8 +28,9 @@
 <meta property="og:description" content="WHY随着 stable-diffusion-SDXL-1.0发布，text2img的效果越来越好了，加上正好买了2080Ti 22G，于是准备实施SD 硬件   硬件 型号    显卡 2080Ti 22G (魔改)   CPU i7-10070   内存 32G   安装 &amp; 启动当前我是在windows上安装，需要先安装python 3.10 12git clone https:&#x2F;&#x2F;">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://pkking.github.io/2023/08/29/stable-diffusion-webui/image.png">
+<meta property="og:image" content="https://pkking.github.io/2023/08/29/stable-diffusion-webui/prompt1.png">
 <meta property="article:published_time" content="2023-08-29T14:24:00.000Z">
-<meta property="article:modified_time" content="2023-08-29T15:15:37.249Z">
+<meta property="article:modified_time" content="2023-08-29T15:27:06.317Z">
 <meta property="article:author" content="Chaoran">
 <meta property="article:tag" content="stable-diffusion-webui">
 <meta property="article:tag" content="AIGC">
@@ -211,7 +212,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2023-08-29 22:24:00 / 修改时间：23:15:37" itemprop="dateCreated datePublished" datetime="2023-08-29T22:24:00+08:00">2023-08-29</time>
+              <time title="创建时间：2023-08-29 22:24:00 / 修改时间：23:27:06" itemprop="dateCreated datePublished" datetime="2023-08-29T22:24:00+08:00">2023-08-29</time>
             </span>
 
           
@@ -277,6 +278,12 @@
 <p>将<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/files/11423539/styles.csv">style.csv</a>放到代码根目录，然后重启项目即可</p>
 <p>这样在style下拉菜单就能看到各种<code>style</code>了</p>
 <p><img src="/2023/08/29/stable-diffusion-webui/image.png" alt="Alt text"></p>
+<h2 id="screenshot"><a href="#screenshot" class="headerlink" title="screenshot"></a>screenshot</h2><p>prompt</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">photo of a male warrior, modelshoot style, (extremely detailed CG unity 8k wallpaper), full shot body photo of the most beautiful artwork in the world, medieval armor, professional majestic oil painting by Ed Blinkey, Atey Ghailan, Studio Ghibli, by Jeremy Mann, Greg Manchess, Antonio Moro, trending on ArtStation, trending on CGSociety, Intricate, High Detail, Sharp focus, dramatic, photorealistic painting art by midjourney and greg rutkowski</span><br></pre></td></tr></tbody></table></figure>
+<p>neg prompt</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">canvas frame, cartoon, 3d, ((disfigured)), ((bad art)), ((deformed)),((extra limbs)),((close up)),((b&amp;w)), weird colors, blurry, (((duplicate))), ((morbid)), ((mutilated)), [out of frame], extra fingers, mutated hands, ((poorly drawn hands)), ((poorly drawn face)), (((mutation))), (((deformed))), ((ugly)), blurry, ((bad anatomy)), (((bad proportions))), ((extra limbs)), cloned face, (((disfigured))), out of frame, ugly, extra limbs, (bad anatomy), gross proportions, (malformed limbs), ((missing arms)), ((missing legs)), (((extra arms))), (((extra legs))), mutated hands, (fused fingers), (too many fingers), (((long neck))), Photoshop, video game, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, mutation, mutated, extra limbs, extra legs, extra arms, disfigured, deformed, cross-eye, body out of frame, blurry, bad art, bad anatomy, 3d render</span><br></pre></td></tr></tbody></table></figure>
+
+<p><img src="/2023/08/29/stable-diffusion-webui/prompt1.png" alt="Alt text"></p>
 <h2 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h2><ul>
 <li>收集一些<code>Prompt</code>和插件</li>
 <li>调试<code>refine</code></li>
@@ -369,7 +376,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#WHY"><span class="nav-number">1.</span> <span class="nav-text">WHY</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">硬件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-amp-%E5%90%AF%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">安装 &amp; 启动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E9%85%8D%E7%BD%AE"><span class="nav-number">4.</span> <span class="nav-text">模型配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AESDXL-1-0"><span class="nav-number">4.1.</span> <span class="nav-text">配置SDXL 1.0</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AEstyle"><span class="nav-number">5.</span> <span class="nav-text">配置style</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TODO"><span class="nav-number">6.</span> <span class="nav-text">TODO</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#WHY"><span class="nav-number">1.</span> <span class="nav-text">WHY</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">硬件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-amp-%E5%90%AF%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">安装 &amp; 启动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E9%85%8D%E7%BD%AE"><span class="nav-number">4.</span> <span class="nav-text">模型配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AESDXL-1-0"><span class="nav-number">4.1.</span> <span class="nav-text">配置SDXL 1.0</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AEstyle"><span class="nav-number">5.</span> <span class="nav-text">配置style</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#screenshot"><span class="nav-number">6.</span> <span class="nav-text">screenshot</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TODO"><span class="nav-number">7.</span> <span class="nav-text">TODO</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
