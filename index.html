@@ -180,6 +180,120 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2023/08/29/stable-diffusion-webui/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+      <meta itemprop="name" content="Chaoran">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/08/29/stable-diffusion-webui/" class="post-title-link" itemprop="url">stable-diffusion-webui使用和配置</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-08-29 22:24:00 / 修改时间：23:15:37" itemprop="dateCreated datePublished" datetime="2023-08-29T22:24:00+08:00">2023-08-29</time>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2023/08/29/stable-diffusion-webui/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2023/08/29/stable-diffusion-webui/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="WHY"><a href="#WHY" class="headerlink" title="WHY"></a>WHY</h2><p>随着 <a target="_blank" rel="noopener" href="https://stablediffusionxl.com/"><code>stable-diffusion-SDXL-1.0</code></a>发布，<code>text2img</code>的效果越来越好了，加上正好买了<code>2080Ti 22G</code>，于是准备实施SD</p>
+<h2 id="硬件"><a href="#硬件" class="headerlink" title="硬件"></a>硬件</h2><table>
+<thead>
+<tr>
+<th>硬件</th>
+<th>型号</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>显卡</td>
+<td>2080Ti 22G (魔改)</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>i7-10070</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>32G</td>
+</tr>
+</tbody></table>
+<h2 id="安装-amp-启动"><a href="#安装-amp-启动" class="headerlink" title="安装 &amp; 启动"></a>安装 &amp; 启动</h2><p>当前我是在windows上安装，需要先安装<a target="_blank" rel="noopener" href="https://www.python.org/downloads/release/python-3106/"><code>python 3.10</code></a></p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/AUTOMATIC1111/stable-diffusion-webui</span><br><span class="line">.\webui-user.bat</span><br></pre></td></tr></tbody></table></figure>
+
+<p>执行后，会看到一些打印，当看到<code>Running on local URL:  http://0.0.0.0:7860</code> 就算启动成功了，通过浏览器访问<code>http://ip:7860</code> 即可</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(venv) PS D:\projs\stable-diffusion-webui&gt; .\webui-user.bat    </span><br><span class="line">venv "D:\projs\stable-diffusion-webui\venv\Scripts\Python.exe"</span><br><span class="line">Python 3.10.6 (tags/v3.10.6:9c7b4bd, Aug  1 2022, 21:53:49) [MSC v.1932 64 bit (AMD64)]</span><br><span class="line">Version: v1.5.2</span><br><span class="line">Commit hash: c9c8485bc1e8720aba70f029d25cba1c4abf2b5c</span><br><span class="line">Launching Web UI with arguments: --listen --xformers --no-half-vae</span><br><span class="line">Loading weights [31e35c80fc] from D:\projs\stable-diffusion-webui\models\Stable-diffusion\sd_xl_base_1.0.safetensors</span><br><span class="line">Creating model from config: D:\projs\stable-diffusion-webui\repositories\generative-models\configs\inference\sd_xl_base.yaml</span><br><span class="line">Running on local URL:  http://0.0.0.0:7860</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h2><h3 id="配置SDXL-1-0"><a href="#配置SDXL-1-0" class="headerlink" title="配置SDXL 1.0"></a>配置SDXL 1.0</h3><p>参考<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/11685#discussioncomment-6574915">这个回复</a></p>
+<ol>
+<li>下载<a target="_blank" rel="noopener" href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors">模型</a></li>
+<li>将模型放到<code>models/Stable-diffusion</code>目录</li>
+<li>在<code>webui-user.bat</code>中的<code>COMMANDLINE_ARGS=</code>后增加<code>--no-half-vae</code>参数，例如 <figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set COMMANDLINE_ARGS=--listen --xformers --no-half-vae</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<p><em>注意：SDXL 1.0 需要32G内存</em></p>
+<h2 id="配置style"><a href="#配置style" class="headerlink" title="配置style"></a>配置style</h2><p>参考<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/10129">这个讨论</a></p>
+<p>将<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/files/11423539/styles.csv">style.csv</a>放到代码根目录，然后重启项目即可</p>
+<p>这样在style下拉菜单就能看到各种<code>style</code>了</p>
+<p><img src="/2023/08/29/stable-diffusion-webui/image.png" alt="Alt text"></p>
+<h2 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h2><ul>
+<li>收集一些<code>Prompt</code>和插件</li>
+<li>调试<code>refine</code></li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2023/07/24/openEuler-DE-in-WSL/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -211,7 +325,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -347,7 +461,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -442,7 +556,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -552,7 +666,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -658,7 +772,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -751,7 +865,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -854,7 +968,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -1018,7 +1132,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-08-29 23:13:25" itemprop="dateModified" datetime="2023-08-29T23:13:25+08:00">2023-08-29</time>
+                <time title="修改时间：2023-08-29 23:15:37" itemprop="dateModified" datetime="2023-08-29T23:15:37+08:00">2023-08-29</time>
               </span>
 
           
@@ -1196,7 +1310,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -1207,7 +1321,7 @@
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
-        <span class="site-state-item-count">31</span>
+        <span class="site-state-item-count">33</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

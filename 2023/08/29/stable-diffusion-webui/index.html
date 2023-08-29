@@ -20,19 +20,23 @@
     var CONFIG = {"hostname":"pkking.github.io","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="some notions">
-<meta property="og:type" content="website">
-<meta property="og:title" content="tags">
-<meta property="og:url" content="https://pkking.github.io/tags/index.html">
+  <meta name="description" content="WHY随着 stable-diffusion-SDXL-1.0发布，text2img的效果越来越好了，加上正好买了2080Ti 22G，于是准备实施SD 硬件   硬件 型号    显卡 2080Ti 22G (魔改)   CPU i7-10070   内存 32G   安装 &amp; 启动当前我是在windows上安装，需要先安装python 3.10 12git clone https:&#x2F;&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="stable-diffusion-webui使用和配置">
+<meta property="og:url" content="https://pkking.github.io/2023/08/29/stable-diffusion-webui/index.html">
 <meta property="og:site_name" content="a cup of waaagh">
-<meta property="og:description" content="some notions">
+<meta property="og:description" content="WHY随着 stable-diffusion-SDXL-1.0发布，text2img的效果越来越好了，加上正好买了2080Ti 22G，于是准备实施SD 硬件   硬件 型号    显卡 2080Ti 22G (魔改)   CPU i7-10070   内存 32G   安装 &amp; 启动当前我是在windows上安装，需要先安装python 3.10 12git clone https:&#x2F;&#x2F;">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2019-11-17T10:52:50.000Z">
-<meta property="article:modified_time" content="2023-08-29T15:15:37.253Z">
+<meta property="og:image" content="https://pkking.github.io/2023/08/29/stable-diffusion-webui/image.png">
+<meta property="article:published_time" content="2023-08-29T14:24:00.000Z">
+<meta property="article:modified_time" content="2023-08-29T15:15:37.249Z">
 <meta property="article:author" content="Chaoran">
+<meta property="article:tag" content="stable-diffusion-webui">
+<meta property="article:tag" content="AIGC">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pkking.github.io/2023/08/29/stable-diffusion-webui/image.png">
 
-<link rel="canonical" href="https://pkking.github.io/tags/">
+<link rel="canonical" href="https://pkking.github.io/2023/08/29/stable-diffusion-webui/">
 
 
 <script id="page-configurations">
@@ -40,13 +44,12 @@
   CONFIG.page = {
     sidebar: "",
     isHome : false,
-    isPost : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>tags | a cup of waaagh
-</title>
+  <title>stable-diffusion-webui使用和配置 | a cup of waaagh</title>
   
 
 
@@ -176,51 +179,139 @@
       <div class="main-inner">
         <div class="content-wrap">
           
-  
-  
 
-          <div class="content page posts-expand">
+          <div class="content post posts-expand">
             
 
     
-    
-    
-    <div class="post-block" lang="zh-CN">
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2023/08/29/stable-diffusion-webui/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+      <meta itemprop="name" content="Chaoran">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+    </span>
       <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          stable-diffusion-webui使用和配置
+        </h1>
 
-<h1 class="post-title" itemprop="name headline">tags
-</h1>
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
 
-<div class="post-meta">
+              <time title="创建时间：2023-08-29 22:24:00 / 修改时间：23:15:37" itemprop="dateCreated datePublished" datetime="2023-08-29T22:24:00+08:00">2023-08-29</time>
+            </span>
+
+          
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="fa fa-comment-o"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2023/08/29/stable-diffusion-webui/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2023/08/29/stable-diffusion-webui/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
   
 
-</div>
+        </div>
+      </header>
 
-</header>
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-      
-      
-      <div class="post-body">
-          <div class="tag-cloud">
-            <div class="tag-cloud-title">
-              目前共计 33 个标签
-            </div>
-            <div class="tag-cloud-tags">
-              <a href="/tags/AIGC/" style="font-size: 12px; color: #ccc">AIGC</a> <a href="/tags/DE/" style="font-size: 12px; color: #ccc">DE</a> <a href="/tags/EUR/" style="font-size: 12px; color: #ccc">EUR</a> <a href="/tags/WSL/" style="font-size: 12px; color: #ccc">WSL</a> <a href="/tags/Yocto/" style="font-size: 12px; color: #ccc">Yocto</a> <a href="/tags/algrithm/" style="font-size: 12px; color: #ccc">algrithm</a> <a href="/tags/arm/" style="font-size: 12px; color: #ccc">arm</a> <a href="/tags/container/" style="font-size: 12px; color: #ccc">container</a> <a href="/tags/crossBuild/" style="font-size: 12px; color: #ccc">crossBuild</a> <a href="/tags/cs186/" style="font-size: 12px; color: #ccc">cs186</a> <a href="/tags/database/" style="font-size: 12px; color: #ccc">database</a> <a href="/tags/docker/" style="font-size: 12px; color: #ccc">docker</a> <a href="/tags/gitcafe/" style="font-size: 12px; color: #ccc">gitcafe</a> <a href="/tags/golang/" style="font-size: 12px; color: #ccc">golang</a> <a href="/tags/i3/" style="font-size: 12px; color: #ccc">i3</a> <a href="/tags/infrastructure/" style="font-size: 12px; color: #ccc">infrastructure</a> <a href="/tags/k8s/" style="font-size: 12px; color: #ccc">k8s</a> <a href="/tags/leetcode/" style="font-size: 12px; color: #ccc">leetcode</a> <a href="/tags/manacher/" style="font-size: 12px; color: #ccc">manacher</a> <a href="/tags/oci/" style="font-size: 12px; color: #ccc">oci</a> <a href="/tags/openEuler/" style="font-size: 12px; color: #ccc">openEuler</a> <a href="/tags/palindromic/" style="font-size: 12px; color: #ccc">palindromic</a> <a href="/tags/pelican/" style="font-size: 12px; color: #ccc">pelican</a> <a href="/tags/python/" style="font-size: 30px; color: #111">python</a> <a href="/tags/rkt/" style="font-size: 12px; color: #ccc">rkt</a> <a href="/tags/sbuild/" style="font-size: 12px; color: #ccc">sbuild</a> <a href="/tags/sql/" style="font-size: 12px; color: #ccc">sql</a> <a href="/tags/stable-diffusion-webui/" style="font-size: 12px; color: #ccc">stable-diffusion-webui</a> <a href="/tags/tiling-window-manager/" style="font-size: 12px; color: #ccc">tiling window manager</a> <a href="/tags/ubuntu/" style="font-size: 12px; color: #ccc">ubuntu</a> <a href="/tags/xrdp/" style="font-size: 12px; color: #ccc">xrdp</a> <a href="/tags/%E5%8D%9A%E5%AE%A2/" style="font-size: 12px; color: #ccc">博客</a> <a href="/tags/%E7%94%A8%E6%88%B7%E8%BD%AF%E4%BB%B6%E4%BB%93%E5%BA%93/" style="font-size: 12px; color: #ccc">用户软件仓库</a>
-            </div>
-          </div>
-        
-      </div>
-      
-      
-      
+        <h2 id="WHY"><a href="#WHY" class="headerlink" title="WHY"></a>WHY</h2><p>随着 <a target="_blank" rel="noopener" href="https://stablediffusionxl.com/"><code>stable-diffusion-SDXL-1.0</code></a>发布，<code>text2img</code>的效果越来越好了，加上正好买了<code>2080Ti 22G</code>，于是准备实施SD</p>
+<h2 id="硬件"><a href="#硬件" class="headerlink" title="硬件"></a>硬件</h2><table>
+<thead>
+<tr>
+<th>硬件</th>
+<th>型号</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>显卡</td>
+<td>2080Ti 22G (魔改)</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>i7-10070</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>32G</td>
+</tr>
+</tbody></table>
+<h2 id="安装-amp-启动"><a href="#安装-amp-启动" class="headerlink" title="安装 &amp; 启动"></a>安装 &amp; 启动</h2><p>当前我是在windows上安装，需要先安装<a target="_blank" rel="noopener" href="https://www.python.org/downloads/release/python-3106/"><code>python 3.10</code></a></p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/AUTOMATIC1111/stable-diffusion-webui</span><br><span class="line">.\webui-user.bat</span><br></pre></td></tr></tbody></table></figure>
+
+<p>执行后，会看到一些打印，当看到<code>Running on local URL:  http://0.0.0.0:7860</code> 就算启动成功了，通过浏览器访问<code>http://ip:7860</code> 即可</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(venv) PS D:\projs\stable-diffusion-webui&gt; .\webui-user.bat    </span><br><span class="line">venv "D:\projs\stable-diffusion-webui\venv\Scripts\Python.exe"</span><br><span class="line">Python 3.10.6 (tags/v3.10.6:9c7b4bd, Aug  1 2022, 21:53:49) [MSC v.1932 64 bit (AMD64)]</span><br><span class="line">Version: v1.5.2</span><br><span class="line">Commit hash: c9c8485bc1e8720aba70f029d25cba1c4abf2b5c</span><br><span class="line">Launching Web UI with arguments: --listen --xformers --no-half-vae</span><br><span class="line">Loading weights [31e35c80fc] from D:\projs\stable-diffusion-webui\models\Stable-diffusion\sd_xl_base_1.0.safetensors</span><br><span class="line">Creating model from config: D:\projs\stable-diffusion-webui\repositories\generative-models\configs\inference\sd_xl_base.yaml</span><br><span class="line">Running on local URL:  http://0.0.0.0:7860</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="模型配置"><a href="#模型配置" class="headerlink" title="模型配置"></a>模型配置</h2><h3 id="配置SDXL-1-0"><a href="#配置SDXL-1-0" class="headerlink" title="配置SDXL 1.0"></a>配置SDXL 1.0</h3><p>参考<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/11685#discussioncomment-6574915">这个回复</a></p>
+<ol>
+<li>下载<a target="_blank" rel="noopener" href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors">模型</a></li>
+<li>将模型放到<code>models/Stable-diffusion</code>目录</li>
+<li>在<code>webui-user.bat</code>中的<code>COMMANDLINE_ARGS=</code>后增加<code>--no-half-vae</code>参数，例如 <figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set COMMANDLINE_ARGS=--listen --xformers --no-half-vae</span><br></pre></td></tr></tbody></table></figure></li>
+</ol>
+<p><em>注意：SDXL 1.0 需要32G内存</em></p>
+<h2 id="配置style"><a href="#配置style" class="headerlink" title="配置style"></a>配置style</h2><p>参考<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/10129">这个讨论</a></p>
+<p>将<a target="_blank" rel="noopener" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/files/11423539/styles.csv">style.csv</a>放到代码根目录，然后重启项目即可</p>
+<p>这样在style下拉菜单就能看到各种<code>style</code>了</p>
+<p><img src="/2023/08/29/stable-diffusion-webui/image.png" alt="Alt text"></p>
+<h2 id="TODO"><a href="#TODO" class="headerlink" title="TODO"></a>TODO</h2><ul>
+<li>收集一些<code>Prompt</code>和插件</li>
+<li>调试<code>refine</code></li>
+</ul>
+
     </div>
-    
 
     
     
     
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/stable-diffusion-webui/" rel="tag"># stable-diffusion-webui</a>
+              <a href="/tags/AIGC/" rel="tag"># AIGC</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/07/24/openEuler-DE-in-WSL/" rel="prev" title="如何在openEuler WSL中体验完整的桌面环境">
+      <i class="fa fa-chevron-left"></i> 如何在openEuler WSL中体验完整的桌面环境
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
 
 
           </div>
@@ -278,6 +369,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#WHY"><span class="nav-number">1.</span> <span class="nav-text">WHY</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6"><span class="nav-number">2.</span> <span class="nav-text">硬件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-amp-%E5%90%AF%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">安装 &amp; 启动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A8%A1%E5%9E%8B%E9%85%8D%E7%BD%AE"><span class="nav-number">4.</span> <span class="nav-text">模型配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AESDXL-1-0"><span class="nav-number">4.1.</span> <span class="nav-text">配置SDXL 1.0</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%85%8D%E7%BD%AEstyle"><span class="nav-number">5.</span> <span class="nav-text">配置style</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TODO"><span class="nav-number">6.</span> <span class="nav-text">TODO</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -428,9 +520,9 @@ if (document.querySelectorAll('pre.mermaid').length) {
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "https://pkking.github.io/tags/index.html";
-    this.page.identifier = "tags/index.html";
-    this.page.title = "tags";
+    this.page.url = "https://pkking.github.io/2023/08/29/stable-diffusion-webui/";
+    this.page.identifier = "2023/08/29/stable-diffusion-webui/";
+    this.page.title = "stable-diffusion-webui使用和配置";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {
