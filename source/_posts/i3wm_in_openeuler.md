@@ -26,7 +26,7 @@ date: 2023-3-18
     dnf in xorg-x11-server
     ```
 
-1. 同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment)通常会包含[非常多的组件](https://wiki.archlinux.org/title/desktop_environment#Custom_environments)，因此还需要安装一些基本组件
+1. 同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment）通常会包含[非常多的组件](https://wiki.archlinux.org/title/desktop_environment#Custom_environments)，因此还需要安装一些基本组件
     ```bash
     dnf in xorg-x11-drv-*  lightdm lightdm-gtk
     ```
@@ -52,3 +52,14 @@ mod+shift+r：热加载配置文件
 mod+shift+e：关闭i3
 mod+shift+l：锁屏
 ```
+
+## 在WSL中体验i3
+除了在正常的linux虚拟机中使用i3，其实还可以通过`xrdp+mstsc`在WSL中体验i3
+1. 参考 {% post_link openEuler-DE-in-WSL %} 来在`WSL`中安装`xrdp`并成功启动
+1. 在$HOME目录下创建 .xsession，并给与执行权限
+    ```
+    $ echo 'exec i3' > $HOME/.xsession
+    $ chmod +x $HOME/.xsession
+    ```
+1. 通过`mstsc`远程桌面链接WSL，目标IP可以通过 `ip a`命令查看
+1. 链接协议选择`Xvnc`，输入正确的用户名密码后，即可进入i3的界面啦
