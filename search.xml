@@ -194,7 +194,7 @@
 <li><p>i3是基于X协议的，因此需要先安装X Server </p>
  <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-server</span><br></pre></td></tr></tbody></table></figure>
 </li>
-<li><p>同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment)通常会包含<a href="https://wiki.archlinux.org/title/desktop_environment#Custom_environments">非常多的组件</a>，因此还需要安装一些基本组件</p>
+<li><p>同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment）通常会包含<a href="https://wiki.archlinux.org/title/desktop_environment#Custom_environments">非常多的组件</a>，因此还需要安装一些基本组件</p>
  <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-drv-*  lightdm lightdm-gtk</span><br></pre></td></tr></tbody></table></figure></li>
 <li><p>最后，我们安装i3相关的组件</p>
  <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></tbody></table></figure></li>
@@ -204,7 +204,16 @@
 </li>
 </ol>
 <p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">mod+d：调出dmenu，用于快速启动进程</span><br><span class="line">mod+enter：启动terminal</span><br><span class="line">mod+↑/mod+↓/mod+←/mod+→：调整focus的窗口</span><br><span class="line">mod+shift+q：关闭当前focus的窗口</span><br><span class="line">mod+shift+r：热加载配置文件</span><br><span class="line">mod+shift+e：关闭i3</span><br><span class="line">mod+shift+l：锁屏</span><br></pre></td></tr></tbody></table></figure>]]></content>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">mod+d：调出dmenu，用于快速启动进程</span><br><span class="line">mod+enter：启动terminal</span><br><span class="line">mod+↑/mod+↓/mod+←/mod+→：调整focus的窗口</span><br><span class="line">mod+shift+q：关闭当前focus的窗口</span><br><span class="line">mod+shift+r：热加载配置文件</span><br><span class="line">mod+shift+e：关闭i3</span><br><span class="line">mod+shift+l：锁屏</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="在WSL中体验i3"><a href="#在WSL中体验i3" class="headerlink" title="在WSL中体验i3"></a>在WSL中体验i3</h2><p>除了在正常的linux虚拟机中使用i3，其实还可以通过<code>xrdp+mstsc</code>在WSL中体验i3</p>
+<ol>
+<li>参考 <a href="/2023/07/24/openEuler-DE-in-WSL/" title="如何在openEuler WSL中体验完整的桌面环境">如何在openEuler WSL中体验完整的桌面环境</a> 来在<code>WSL</code>中安装<code>xrdp</code>并成功启动</li>
+<li>在$HOME目录下创建 .xsession，并给与执行权限 <figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">$ echo 'exec i3' &gt; $HOME/.xsession</span><br><span class="line">$ chmod +x $HOME/.xsession</span><br></pre></td></tr></tbody></table></figure></li>
+<li>通过<code>mstsc</code>远程桌面链接WSL，目标IP可以通过 <code>ip a</code>命令查看</li>
+<li>链接协议选择<code>Xvnc</code>，输入正确的用户名密码后，即可进入i3的界面啦</li>
+</ol>
+]]></content>
       <tags>
         <tag>tiling window manager</tag>
         <tag>openEuler</tag>
