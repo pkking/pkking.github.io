@@ -31,7 +31,7 @@ jobs:
           sed -i 's|root: /blog/|root: /|g' _config.yml
           npm run build
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
