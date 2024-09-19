@@ -1,7 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>大教堂于集市</title>
+    <title>runc 源码分析-1 概述</title>
+    <url>/2017/05/11/analysis-1/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
+<ul>
+<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
+<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
+<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
+</ul>
+<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
+<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
+<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
+<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
+<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
+<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
+
+<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
+]]></content>
+      <tags>
+        <tag>container</tag>
+        <tag>oci</tag>
+        <tag>rkt</tag>
+        <tag>docker</tag>
+        <tag>k8s</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>关于在amd64架构下构建arm架构deb包的问题</title>
+    <url>/2015/05/12/crossBuild/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="poky-yocto"><a href="#poky-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
+<p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
+<h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
+<p>不过转念一想，既然要基于ubuntu的源码，那么yocto中所带的源码则显然无法使用了，因为yocto虽然也能制作deb包，不过和ubuntu中的版本完全无法兼容，并且ubuntu对上游源码所打的一些补丁yocto也没有集成，因此可能需要对yocto进行一番改造。</p>
+<h3 id="放弃"><a href="#放弃" class="headerlink" title="放弃"></a>放弃</h3><p>参考了yocto的文档后，我们发现，yocto实现deb包的机制和通常的debian/ubuntu构建流程不太一样，后者使用dpkg-buildpackage来构建特定的包，而yocto则采用了自己实现的机制（<code>lib/pm.py</code>利用dpkg apt等工具实现了自己的打包流程）这导致其构建包的流程几乎不透明了，而要通过修改yocto来达到生成特定版本ubuntu兼容的deb包，则可以预见包含比较大的工作量。</p>
+<p>故此，yocto的路线暂停，而这里的主要问题是，ubuntu的rootfs是一个基于二进制包的img，我们只需要找到一种方法，能够将上游源码构建为某个版本apt能够识别、安装的包即可，有了这些包，构建rootfs就再轻松不过了</p>
+<h1 id="sbuild"><a href="#sbuild" class="headerlink" title="sbuild"></a>sbuild</h1><p>在yocto的方案受挫后，我们发现，当前主要的问题在于如何将交叉编译生成的二进制文件打包成软件包，经过一番搜索后，cross-build映入了我们眼帘。在看完<a href="https://wiki.ubuntu.com/CrossBuilding">这篇</a>、<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">这篇</a>和<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">这篇</a>后，总结出一个结论：妈蛋交叉构建还是个坑啊，大家要构建最好把源码传到<code>launchpad</code>上啊，我们建议大家构建的时候用最新的工具链哟，也欢迎搭建帮忙一起测试sbuild和那些个坑爹的package 维护者挖的坑 （逃</p>
+<p>不过第一篇文中，同时也表示业界在<code>crossbuild</code>的泥潭里正缓慢的前行，那么之前的<code>ubuntu for arm</code>版本又是如何构建出来的呢？？下面来解答！</p>
+<h3 id="crossBuild-node"><a href="#crossBuild-node" class="headerlink" title="crossBuild node"></a>crossBuild node</h3><p>这里就要请出<a href="https://launchpad.net/ubuntu">launchpad</a>了，根据<a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">这篇文章</a>，可以得知，ubuntu基本是采用launchpad的分布式构建节点来制作软件包的，并且他们还是用的最慢的本地构建方法（也就是利用<code>qemu</code>，在<code>x86_64</code>的虚拟机上模拟<code>arm</code>环境，然后用arm架构的工具构建软件包），事实上，launchpad的<a href="https://help.launchpad.net/Packaging/PPA">这篇文章</a>也是这么说的。</p>
+<p>既然如此，那我们何不自己搞一发本地构建？</p>
+<p>于是跟随着这篇<a href="https://wiki.ubuntu.com/SimpleSbuild">guide</a> 我们搭建了一个 host,build,target都是armhf的chroot环境（前面的教程搭建的是基于amd64的sbuild chroot，只需要在mk-sbuild和sbuild的时候，将–arch=armhf加入命令行即可），然后就可以轻松的在amd64下构建arm软件包了</p>
+<h1 id="buildd"><a href="#buildd" class="headerlink" title="buildd"></a>buildd</h1><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>用sbuild构建了一些包之后，发现，我们的日志和launchpad上的build.log并不一样，launchpad似乎使用了一个叫做buildd的工具来进行自动化的构建，google一番之后，发现了<a href="https://www.debian.org/devel/buildd/">这篇文章</a>，原来launchpad利用<code>wanna-build buildd sbuild</code>构建了一套自动化构建环境，buildd周期性的检查upload上来的源码包，而wanna-build则维护了一个包含各个软件包在各个架构上的构建状态的数据库，buildd通过数据库来选择是否重新构建（如果该包当前状态是未成功构建或超过包的保质期）或者忽略本次构建（包已经构建成功并且在保质期内），而最终的构建工具，则是sbuild</p>
+<h3 id="还是sbuild"><a href="#还是sbuild" class="headerlink" title="还是sbuild"></a>还是sbuild</h3><p>最终真相大白，虽然我们可能没有资源架设<code>openstack集群</code>来进行分布式构建，但是只要采用和launchpad一样策略：使用sbuild构建各个架构的软件包，也是毫无问题的。</p>
+<p>最后，送上利用sbuild从零构建arm等架构软件包的<a href="https://wiki.debian.org/sbuild">官方教程</a></p>
+<h1 id="参考文献："><a href="#参考文献：" class="headerlink" title="参考文献："></a>参考文献：</h1><ul>
+<li><a href="https://wiki.debian.org/sbuild">https://wiki.debian.org/sbuild</a></li>
+<li><a href="https://wiki.ubuntu.com/SimpleSbuild">https://wiki.ubuntu.com/SimpleSbuild</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch</a></li>
+<li><a href="https://wiki.ubuntu.com/CrossBuilding">https://wiki.ubuntu.com/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart</a></li>
+<li><a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379</a></li>
+<li><a href="https://help.launchpad.net/Packaging/PPA">https://help.launchpad.net/Packaging/PPA</a></li>
+<li><a href="https://www.debian.org/devel/buildd/">https://www.debian.org/devel/buildd/</a></li>
+</ul>
+]]></content>
+      <tags>
+        <tag>ubuntu</tag>
+        <tag>sbuild</tag>
+        <tag>arm</tag>
+        <tag>crossBuild</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>大教堂与集市</title>
     <url>/2024/09/19/The-Cathedral-the-Bazaa/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="第一章-教堂与市集"><a href="#第一章-教堂与市集" class="headerlink" title="第一章 教堂与市集"></a>第一章 教堂与市集</h1><p>Linux 打破了许多软件开发的传统，这个世界级的操作系统在五年前（1991 年）仅仅靠着如丝般的互联网，神奇地联合了散布在全世界数以千计兼职的玩家们来开发它，谁曾料到会发生这样的事情呢？</p>
 <p>我当然也没料到，Linux 出现在我电脑屏幕是在 1993 年初，当时我埋首于 UNIX 及开源的软件开发已有十年，1980 年代中期，我是 GNU <sup id="fnref:1"><a href="#fn:1" rel="footnote"><span class="hint--top hint--error hint--medium hint--rounded hint--bounce" aria-label="GNU 是自由软件基金会（Free Software Fundation）的一个项目，目标是开发出 UNIX 上所有程序的自由版本，Emacs 是自由软件基会开发出来的一支程序，可做文字编辑器，提供写程序的整合开发环境，用来读电子邮件，新闻群组，甚至浏览网页。更详细的资讯请参考 http://www.gnu.org。 ―― 译注。
@@ -313,67 +377,45 @@
       </tags>
   </entry>
   <entry>
-    <title>runc 源码分析-1 概述</title>
-    <url>/2017/05/11/analysis-1/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
-<ul>
-<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
-<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
-<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
+    <title>cs186学习-笔记1</title>
+    <url>/2020/11/21/cs186-learn-1/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
+<p><a href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
+<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
+<li>进入数据库命令行</li>
+<li>创建一个表<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (name Text,age <span class="type">bigint</span>,num_dogs <span class="type">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (name,`age`,num_dogs) <span class="keyword">values</span> (<span class="string">'Ace'</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">'Ada'</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">'Ben'</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">'Cho'</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></tbody></table></figure></li>
 </ul>
-<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
-<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
-<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
-<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
-<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
-<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
+<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2><p>进入数据库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></tbody></table></figure>
+<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3><p>基本格式：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>col<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span>;</span><br></pre></td></tr></tbody></table></figure>
+<p>举例：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,num_dogs <span class="keyword">FROM</span> person;</span><br><span class="line">name<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">3</span></span><br><span class="line">Ben<span class="operator">|</span><span class="number">2</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
+<p>这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</p>
+<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span> <span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">18</span><span class="operator">|</span><span class="number">3</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">27</span><span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
 
-<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
+<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span> <span class="keyword">AND</span> num_dogs <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
+<ol>
+<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
+<li><code>NULL</code>在bool判断中，表示false</li>
+<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
+</ol>
+<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span> <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">HAVING</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span>; <span class="comment">-- 在group by之后执行 </span></span><br></pre></td></tr></tbody></table></figure>
+<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
+<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
 ]]></content>
       <tags>
-        <tag>container</tag>
-        <tag>oci</tag>
-        <tag>rkt</tag>
-        <tag>docker</tag>
-        <tag>k8s</tag>
-        <tag>golang</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>关于在amd64架构下构建arm架构deb包的问题</title>
-    <url>/2015/05/12/crossBuild/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="poky-yocto"><a href="#poky-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
-<p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
-<h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
-<p>不过转念一想，既然要基于ubuntu的源码，那么yocto中所带的源码则显然无法使用了，因为yocto虽然也能制作deb包，不过和ubuntu中的版本完全无法兼容，并且ubuntu对上游源码所打的一些补丁yocto也没有集成，因此可能需要对yocto进行一番改造。</p>
-<h3 id="放弃"><a href="#放弃" class="headerlink" title="放弃"></a>放弃</h3><p>参考了yocto的文档后，我们发现，yocto实现deb包的机制和通常的debian/ubuntu构建流程不太一样，后者使用dpkg-buildpackage来构建特定的包，而yocto则采用了自己实现的机制（<code>lib/pm.py</code>利用dpkg apt等工具实现了自己的打包流程）这导致其构建包的流程几乎不透明了，而要通过修改yocto来达到生成特定版本ubuntu兼容的deb包，则可以预见包含比较大的工作量。</p>
-<p>故此，yocto的路线暂停，而这里的主要问题是，ubuntu的rootfs是一个基于二进制包的img，我们只需要找到一种方法，能够将上游源码构建为某个版本apt能够识别、安装的包即可，有了这些包，构建rootfs就再轻松不过了</p>
-<h1 id="sbuild"><a href="#sbuild" class="headerlink" title="sbuild"></a>sbuild</h1><p>在yocto的方案受挫后，我们发现，当前主要的问题在于如何将交叉编译生成的二进制文件打包成软件包，经过一番搜索后，cross-build映入了我们眼帘。在看完<a href="https://wiki.ubuntu.com/CrossBuilding">这篇</a>、<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">这篇</a>和<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">这篇</a>后，总结出一个结论：妈蛋交叉构建还是个坑啊，大家要构建最好把源码传到<code>launchpad</code>上啊，我们建议大家构建的时候用最新的工具链哟，也欢迎搭建帮忙一起测试sbuild和那些个坑爹的package 维护者挖的坑 （逃</p>
-<p>不过第一篇文中，同时也表示业界在<code>crossbuild</code>的泥潭里正缓慢的前行，那么之前的<code>ubuntu for arm</code>版本又是如何构建出来的呢？？下面来解答！</p>
-<h3 id="crossBuild-node"><a href="#crossBuild-node" class="headerlink" title="crossBuild node"></a>crossBuild node</h3><p>这里就要请出<a href="https://launchpad.net/ubuntu">launchpad</a>了，根据<a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">这篇文章</a>，可以得知，ubuntu基本是采用launchpad的分布式构建节点来制作软件包的，并且他们还是用的最慢的本地构建方法（也就是利用<code>qemu</code>，在<code>x86_64</code>的虚拟机上模拟<code>arm</code>环境，然后用arm架构的工具构建软件包），事实上，launchpad的<a href="https://help.launchpad.net/Packaging/PPA">这篇文章</a>也是这么说的。</p>
-<p>既然如此，那我们何不自己搞一发本地构建？</p>
-<p>于是跟随着这篇<a href="https://wiki.ubuntu.com/SimpleSbuild">guide</a> 我们搭建了一个 host,build,target都是armhf的chroot环境（前面的教程搭建的是基于amd64的sbuild chroot，只需要在mk-sbuild和sbuild的时候，将–arch=armhf加入命令行即可），然后就可以轻松的在amd64下构建arm软件包了</p>
-<h1 id="buildd"><a href="#buildd" class="headerlink" title="buildd"></a>buildd</h1><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>用sbuild构建了一些包之后，发现，我们的日志和launchpad上的build.log并不一样，launchpad似乎使用了一个叫做buildd的工具来进行自动化的构建，google一番之后，发现了<a href="https://www.debian.org/devel/buildd/">这篇文章</a>，原来launchpad利用<code>wanna-build buildd sbuild</code>构建了一套自动化构建环境，buildd周期性的检查upload上来的源码包，而wanna-build则维护了一个包含各个软件包在各个架构上的构建状态的数据库，buildd通过数据库来选择是否重新构建（如果该包当前状态是未成功构建或超过包的保质期）或者忽略本次构建（包已经构建成功并且在保质期内），而最终的构建工具，则是sbuild</p>
-<h3 id="还是sbuild"><a href="#还是sbuild" class="headerlink" title="还是sbuild"></a>还是sbuild</h3><p>最终真相大白，虽然我们可能没有资源架设<code>openstack集群</code>来进行分布式构建，但是只要采用和launchpad一样策略：使用sbuild构建各个架构的软件包，也是毫无问题的。</p>
-<p>最后，送上利用sbuild从零构建arm等架构软件包的<a href="https://wiki.debian.org/sbuild">官方教程</a></p>
-<h1 id="参考文献："><a href="#参考文献：" class="headerlink" title="参考文献："></a>参考文献：</h1><ul>
-<li><a href="https://wiki.debian.org/sbuild">https://wiki.debian.org/sbuild</a></li>
-<li><a href="https://wiki.ubuntu.com/SimpleSbuild">https://wiki.ubuntu.com/SimpleSbuild</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch</a></li>
-<li><a href="https://wiki.ubuntu.com/CrossBuilding">https://wiki.ubuntu.com/CrossBuilding</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart</a></li>
-<li><a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379</a></li>
-<li><a href="https://help.launchpad.net/Packaging/PPA">https://help.launchpad.net/Packaging/PPA</a></li>
-<li><a href="https://www.debian.org/devel/buildd/">https://www.debian.org/devel/buildd/</a></li>
-</ul>
-]]></content>
-      <tags>
-        <tag>ubuntu</tag>
-        <tag>sbuild</tag>
-        <tag>arm</tag>
-        <tag>crossBuild</tag>
+        <tag>database</tag>
+        <tag>sql</tag>
+        <tag>cs186</tag>
       </tags>
   </entry>
   <entry>
@@ -452,48 +494,6 @@
         <tag>pelican</tag>
         <tag>gitcafe</tag>
         <tag>博客</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>cs186学习-笔记1</title>
-    <url>/2020/11/21/cs186-learn-1/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
-<p><a href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
-<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
-<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
-<li>进入数据库命令行</li>
-<li>创建一个表<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (name Text,age <span class="type">bigint</span>,num_dogs <span class="type">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (name,`age`,num_dogs) <span class="keyword">values</span> (<span class="string">'Ace'</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">'Ada'</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">'Ben'</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">'Cho'</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2><p>进入数据库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></tbody></table></figure>
-<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3><p>基本格式：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>col<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span>;</span><br></pre></td></tr></tbody></table></figure>
-<p>举例：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,num_dogs <span class="keyword">FROM</span> person;</span><br><span class="line">name<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">3</span></span><br><span class="line">Ben<span class="operator">|</span><span class="number">2</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
-<p>这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</p>
-<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span> <span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">18</span><span class="operator">|</span><span class="number">3</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">27</span><span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span> <span class="keyword">AND</span> num_dogs <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
-<ol>
-<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
-<li><code>NULL</code>在bool判断中，表示false</li>
-<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
-</ol>
-<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span> <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">HAVING</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span>; <span class="comment">-- 在group by之后执行 </span></span><br></pre></td></tr></tbody></table></figure>
-<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
-<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
-]]></content>
-      <tags>
-        <tag>database</tag>
-        <tag>sql</tag>
-        <tag>cs186</tag>
       </tags>
   </entry>
   <entry>
