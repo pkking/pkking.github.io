@@ -1,10 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>runc 源码分析-1 概述</title>
+    <url>/2017/05/11/analysis-1/</url>
+    <content><![CDATA[<h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
+<ul>
+<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
+<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
+<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
+</ul>
+<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
+<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
+<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
+<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
+<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
+<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
+
+<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
+]]></content>
+      <tags>
+        <tag>container</tag>
+        <tag>oci</tag>
+        <tag>rkt</tag>
+        <tag>docker</tag>
+        <tag>k8s</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>大教堂于集市</title>
     <url>/2024/09/19/The-Cathedral-the-Bazaa/</url>
     <content><![CDATA[<h1 id="第一章-教堂与市集"><a href="#第一章-教堂与市集" class="headerlink" title="第一章 教堂与市集"></a>第一章 教堂与市集</h1><p>Linux 打破了许多软件开发的传统，这个世界级的操作系统在五年前（1991 年）仅仅靠着如丝般的互联网，神奇地联合了散布在全世界数以千计兼职的玩家们来开发它，谁曾料到会发生这样的事情呢？</p>
-<p>我当然也没料到，Linux 出现在我电脑屏幕是在 1993 年初，当时我埋首于 UNIX 及开源的软件开发已有十年，1980 年代中期，我是 GNU [^1][GNU] 项目首批的贡献者之一，我写过许多开源的软件放到网络上供人使用，也曾独立或协同开发好几个程序（nethack，Emacs 的 VC 和 GUD 功能，xlife，…等等），这些程序到今天仍广泛地为人所用，我想我知道这是怎么办到的。</p>
+<p>我当然也没料到，Linux 出现在我电脑屏幕是在 1993 年初，当时我埋首于 UNIX 及开源的软件开发已有十年，1980 年代中期，我是 GNU [^1][] 项目首批的贡献者之一，我写过许多开源的软件放到网络上供人使用，也曾独立或协同开发好几个程序（nethack，Emacs 的 VC 和 GUD 功能，xlife，…等等），这些程序到今天仍广泛地为人所用，我想我知道这是怎么办到的。</p>
 <p>Linux 扭转了许多我认为我已知道的观念。多年来我一直宣扬使用小工具集、快速原型及快速开发的 UNIX 福音。但我也相信对于有一定复杂度的程序必需使用集中和有经验的方法来开发，我相信最重要的软件（操作系统以及庞大的工具程序如 Emacs）必须如建造一座教堂般，由个别的高手或一小群专家在光辉的孤立中小心翼翼地精雕细琢，时机未到之前，不会发布测试版。</p>
 <p><code>Linus Torvald</code>[^2] 的软件开发风格（尽早并经常发布新版本，授权每一件作者可以委托的事，不拒绝几乎到混乱程度的程序）的出现如同一个惊奇，没有令人肃然起敬的教堂，甚至 Linux 的同好们似乎组成了一个有不同流程和不同方式的大市集（Linux 的档案网站就是它适切的象征，每个人都服从着自由的规则），以这个风格开发出来的 Linux 既一致又稳定，表面上看来真是一连串的奇迹。</p>
 <p>市集模式似乎是可行的，并且运作得很好，这个事实带来了相当的震憾。当以我的方法去认知时，我除了努力做好个人的项目，并也试着去了解为什么在Linux的世界，不但没有因为浑沌不清而四分五裂，反而以教堂建造者几乎想像不到的速度在茁壮。</p>
@@ -255,34 +283,6 @@
       </tags>
   </entry>
   <entry>
-    <title>runc 源码分析-1 概述</title>
-    <url>/2017/05/11/analysis-1/</url>
-    <content><![CDATA[<h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
-<ul>
-<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
-<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
-<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
-</ul>
-<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
-<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
-<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
-<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
-<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
-<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
-
-<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
-]]></content>
-      <tags>
-        <tag>container</tag>
-        <tag>oci</tag>
-        <tag>rkt</tag>
-        <tag>docker</tag>
-        <tag>k8s</tag>
-        <tag>golang</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>关于在amd64架构下构建arm架构deb包的问题</title>
     <url>/2015/05/12/crossBuild/</url>
     <content><![CDATA[<h1 id="poky-amp-yocto"><a href="#poky-amp-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
@@ -316,6 +316,48 @@
         <tag>sbuild</tag>
         <tag>arm</tag>
         <tag>crossBuild</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>cs186学习-笔记1</title>
+    <url>/2020/11/21/cs186-learn-1/</url>
+    <content><![CDATA[<h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
+<p><a href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
+<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
+<li>进入数据库命令行</li>
+<li>创建一个表<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (name Text,age <span class="type">bigint</span>,num_dogs <span class="type">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (name,`age`,num_dogs) <span class="keyword">values</span> (<span class="string">'Ace'</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">'Ada'</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">'Ben'</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">'Cho'</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></tbody></table></figure></li>
+</ul>
+<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2><p>进入数据库</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></tbody></table></figure>
+<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3><p>基本格式：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>col<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span>;</span><br></pre></td></tr></tbody></table></figure>
+<p>举例：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,num_dogs <span class="keyword">FROM</span> person;</span><br><span class="line">name<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">3</span></span><br><span class="line">Ben<span class="operator">|</span><span class="number">2</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
+<p>这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</p>
+<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span> <span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span></span><br></pre></td></tr></tbody></table></figure>
+<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">18</span><span class="operator">|</span><span class="number">3</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">27</span><span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span> <span class="keyword">AND</span> num_dogs <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br></pre></td></tr></tbody></table></figure>
+
+<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
+<ol>
+<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
+<li><code>NULL</code>在bool判断中，表示false</li>
+<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
+</ol>
+<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
+<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span> <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">HAVING</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span>; <span class="comment">-- 在group by之后执行 </span></span><br></pre></td></tr></tbody></table></figure>
+<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
+<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
+]]></content>
+      <tags>
+        <tag>database</tag>
+        <tag>sql</tag>
+        <tag>cs186</tag>
       </tags>
   </entry>
   <entry>
@@ -394,48 +436,6 @@
         <tag>pelican</tag>
         <tag>gitcafe</tag>
         <tag>博客</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>cs186学习-笔记1</title>
-    <url>/2020/11/21/cs186-learn-1/</url>
-    <content><![CDATA[<h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
-<p><a href="https://cs186berkeley.net/">cs186</a>这门课是数据库入门课，由浅入深的介绍了一个简单的数据库如何设计和实现的</p>
-<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ul>
-<li>准备一个支持<code>sql</code>的数据库（sqlite，mysql，tidb等都行）</li>
-<li>进入数据库命令行</li>
-<li>创建一个表<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> person (name Text,age <span class="type">bigint</span>,num_dogs <span class="type">bigint</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> person (name,`age`,num_dogs) <span class="keyword">values</span> (<span class="string">'Ace'</span>,<span class="number">20</span>,<span class="number">4</span>),(<span class="string">'Ada'</span>,<span class="number">18</span>,<span class="number">3</span>),(<span class="string">'Ben'</span>,<span class="number">7</span>,<span class="number">2</span>),(<span class="string">'Cho'</span>,<span class="number">27</span>,<span class="number">3</span>);</span><br></pre></td></tr></tbody></table></figure></li>
-</ul>
-<h2 id="基本sql语句"><a href="#基本sql语句" class="headerlink" title="基本sql语句"></a>基本sql语句</h2><p>进入数据库</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">sqlite3 test.db</span><br><span class="line">sqlite&gt; .header on</span><br></pre></td></tr></tbody></table></figure>
-<h3 id="查询语句"><a href="#查询语句" class="headerlink" title="查询语句"></a>查询语句</h3><p>基本格式：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>col<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span>;</span><br></pre></td></tr></tbody></table></figure>
-<p>举例：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,num_dogs <span class="keyword">FROM</span> person;</span><br><span class="line">name<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">3</span></span><br><span class="line">Ben<span class="operator">|</span><span class="number">2</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
-<p>这里数据返回的顺序其实是不一定固定的，除非加上了<code>order by</code>子句</p>
-<h3 id="过滤数据"><a href="#过滤数据" class="headerlink" title="过滤数据"></a>过滤数据</h3><p>通常我们只是关系数据库中某些部分的数据，这是就需要将数据做一定的筛选，以满足我们的要求，<code>WHERE</code>子句就是一个很好的工具：<br>基本格式：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span> <span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span></span><br></pre></td></tr></tbody></table></figure>
-<p>例如，上面的表中，如果我们只关心成年人拥有的狗的数量：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br><span class="line">Ada<span class="operator">|</span><span class="number">18</span><span class="operator">|</span><span class="number">3</span></span><br><span class="line">Cho<span class="operator">|</span><span class="number">27</span><span class="operator">|</span><span class="number">3</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="bool-操作"><a href="#bool-操作" class="headerlink" title="bool 操作"></a>bool 操作</h3><p>当有更复杂的条件时，可以使用<code>bool</code>操作符<code>AND, NOT, OR</code>，比如，这里我们想知道有3只以上的狗的成年人有哪些：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line">sqlite<span class="operator">&gt;</span> <span class="keyword">SELECT</span> name,age,num_dogs <span class="keyword">FROM</span> person <span class="keyword">WHERE</span> age <span class="operator">&gt;=</span> <span class="number">18</span> <span class="keyword">AND</span> num_dogs <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">name<span class="operator">|</span>age<span class="operator">|</span>num_dogs</span><br><span class="line">Ace<span class="operator">|</span><span class="number">20</span><span class="operator">|</span><span class="number">4</span></span><br></pre></td></tr></tbody></table></figure>
-
-<h3 id="NULL相关"><a href="#NULL相关" class="headerlink" title="NULL相关"></a>NULL相关</h3><p>NULL是一个特别的值，任意类型都可以赋值为<code>NULL</code>，因此需要时刻注意的是，任何值都可能是NULL，因此需要关注<code>NULL</code>的一些特性；</p>
-<ol>
-<li>任何和NULL的运算，得到的都是NULL，例如，如果x是NULL，那么<code>if x &gt; 3</code>得到的也是NULL，甚至<code>x = NULL</code>也是NULL，如果要判断一个值是不是NULL，可以使用<code>IS NULL</code>或者<code>IS NOT NULL</code></li>
-<li><code>NULL</code>在bool判断中，表示false</li>
-<li>在bool 操作中，如果表达式不对NULL值求值就能确定<code>true</code>或者<code>false</code>，那么该表达式为<code>true</code>或者<code>false</code>，否则，则为NULL</li>
-</ol>
-<h3 id="聚合"><a href="#聚合" class="headerlink" title="聚合"></a>聚合</h3><p>在包含<code>group by</code>的语句中，having和where的区别：</p>
-<figure class="highlight sql"><table><tbody><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span> <span class="keyword">FROM</span> <span class="operator">&lt;</span>tbl<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span> <span class="comment">-- 在group by之前执行</span></span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> <span class="operator">&lt;</span>cols<span class="operator">&gt;</span></span><br><span class="line"><span class="keyword">HAVING</span> <span class="operator">&lt;</span>predicate<span class="operator">&gt;</span>; <span class="comment">-- 在group by之后执行 </span></span><br></pre></td></tr></tbody></table></figure>
-<p>这里的执行顺序是：<code>from where -&gt; group by -&gt; having -&gt; select</code>;</p>
-<p>需要注意的是，聚合操作，会将多行结果变成一行，因此，如果sql语句中包含了group by和聚合函数，则select 的列，则只能是被聚合的列（即跟在group by后面的列或者在AVG,SUM等函数中的列）</p>
-]]></content>
-      <tags>
-        <tag>database</tag>
-        <tag>sql</tag>
-        <tag>cs186</tag>
       </tags>
   </entry>
   <entry>
