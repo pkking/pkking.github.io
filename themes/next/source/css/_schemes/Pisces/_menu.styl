@@ -1,34 +1,6 @@
-.site-nav-toggle, .site-nav-right {
-  +tablet() {
-    flex-column();
-  }
-
-  .toggle {
-    color: white;
-
-    .toggle-line {
-      background: white;
-    }
-  }
-}
-
 .site-nav {
   +tablet() {
-    display: none;
-  }
-}
-
-if (!hexo-config('menu_settings.badges')) {
-  .menu-item-active a::after {
-    background: $grey;
-    border-radius: 50%;
-    content: ' ';
-    height: 6px;
-    margin-top: -3px;
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    width: 6px;
+    site-nav-hide-by-default();
   }
 }
 
@@ -36,14 +8,24 @@ if (!hexo-config('menu_settings.badges')) {
   display: block;
   margin: 0;
 
-  a, span.exturl {
+  a {
     padding: 5px 20px;
     position: relative;
-    text-align: left;
     transition-property: background-color;
+    menu-item-row();
 
-    &:hover {
-      @extend .menu-item-active a;
+    if (not hexo-config('menu_settings.badges')) {
+      &.menu-item-active::after {
+        background: $grey;
+        border-radius: 50%;
+        content: ' ';
+        height: 6px;
+        margin-top: -3px;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        width: 6px;
+      }
     }
   }
 
@@ -51,15 +33,5 @@ if (!hexo-config('menu_settings.badges')) {
     &.menu-item-search {
       display: none;
     }
-  }
-
-  .badge {
-    background: $grey-light;
-    border-radius: 10px;
-    color: white;
-    float: right;
-    padding: 2px 5px;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, .1);
-    vertical-align: middle;
   }
 }
