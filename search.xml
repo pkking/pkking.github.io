@@ -497,6 +497,42 @@
       </tags>
   </entry>
   <entry>
+    <title>在openEuler中搭建i3wm</title>
+    <url>/2023/03/17/i3wm_in_openeuler/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="什么是i3"><a href="#什么是i3" class="headerlink" title="什么是i3"></a>什么是i3</h2><p>一个<a href="https://en.wikipedia.org/wiki/Tiling_window_manager">平铺式窗口管理器</a><br>就像emacs一样，在习惯使用的人手里，i3可以是一个及其有效率的生产力工具<br>一个介绍视频 <a href="https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295">https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295</a></p>
+<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/2023/03/17/i3wm_in_openeuler/layout.jpeg"></p>
+<h2 id="相关软件（包）"><a href="#相关软件（包）" class="headerlink" title="相关软件（包）"></a>相关软件（包）</h2><p><a href="https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/">i3wm</a><br><a href="https://code.visualstudio.com/docs/setup/linux">vscode</a><br><a href="https://github.com/dylanaraps/neofetch">neofetch</a><br><a href="https://gitee.com/mywaaagh_admin/i3configs">i3config</a></p>
+<h2 id="HOWTO"><a href="#HOWTO" class="headerlink" title="HOWTO"></a>HOWTO</h2><ol>
+<li><p>i3是基于X协议的，因此需要先安装X Server </p>
+ <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-server</span><br></pre></td></tr></tbody></table></figure>
+</li>
+<li><p>同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment）通常会包含<a href="https://wiki.archlinux.org/title/desktop_environment#Custom_environments">非常多的组件</a>，因此还需要安装一些基本组件</p>
+ <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-drv-*  lightdm lightdm-gtk</span><br></pre></td></tr></tbody></table></figure></li>
+<li><p>最后，我们安装i3相关的组件</p>
+ <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></tbody></table></figure></li>
+<li><p>安装完成后，启动<code>lightdm</code></p>
+ <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> systemctl start lightdm</span><br></pre></td></tr></tbody></table></figure>
+<p> <img src="/2023/03/17/i3wm_in_openeuler/lightdm.png"></p>
+</li>
+</ol>
+<p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">mod+d：调出dmenu，用于快速启动进程</span><br><span class="line">mod+enter：启动terminal</span><br><span class="line">mod+↑/mod+↓/mod+←/mod+→：调整focus的窗口</span><br><span class="line">mod+shift+q：关闭当前focus的窗口</span><br><span class="line">mod+shift+r：热加载配置文件</span><br><span class="line">mod+shift+e：关闭i3</span><br><span class="line">mod+shift+l：锁屏</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="在WSL中体验i3"><a href="#在WSL中体验i3" class="headerlink" title="在WSL中体验i3"></a>在WSL中体验i3</h2><p>除了在正常的linux虚拟机中使用i3，其实还可以通过<code>xrdp+mstsc</code>在WSL中体验i3</p>
+<ol>
+<li>参考 <a href="/2023/07/24/openEuler-DE-in-WSL/" title="如何在openEuler WSL中体验完整的桌面环境">如何在openEuler WSL中体验完整的桌面环境</a> 来在<code>WSL</code>中安装<code>xrdp</code>并成功启动</li>
+<li>在$HOME目录下创建 .xsession，并给与执行权限 <figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">$ echo 'exec i3' &gt; $HOME/.xsession</span><br><span class="line">$ chmod +x $HOME/.xsession</span><br></pre></td></tr></tbody></table></figure></li>
+<li>通过<code>mstsc</code>远程桌面链接WSL，目标IP可以通过 <code>ip a</code>命令查看</li>
+<li>链接协议选择<code>Xvnc</code>，输入正确的用户名密码后，即可进入i3的界面啦</li>
+</ol>
+]]></content>
+      <tags>
+        <tag>tiling window manager</tag>
+        <tag>openEuler</tag>
+        <tag>i3</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Manacher 算法求最长回文子串</title>
     <url>/2017/07/31/manacher/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>本文来源于<code>leetcode</code>上的一道求最长回文子串的<a href="https://leetcode.com/problems/longest-palindromic-substring">中级算法题</a></p>
@@ -533,42 +569,6 @@
         <tag>manacher</tag>
         <tag>palindromic</tag>
         <tag>leetcode</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>在openEuler中搭建i3wm</title>
-    <url>/2023/03/17/i3wm_in_openeuler/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="什么是i3"><a href="#什么是i3" class="headerlink" title="什么是i3"></a>什么是i3</h2><p>一个<a href="https://en.wikipedia.org/wiki/Tiling_window_manager">平铺式窗口管理器</a><br>就像emacs一样，在习惯使用的人手里，i3可以是一个及其有效率的生产力工具<br>一个介绍视频 <a href="https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295">https://www.bilibili.com/video/BV1L4411P7zn/?spm_id_from=333.337.search-card.all.click&amp;vd_source=78e28bd49f69d106107f568dc1fa8295</a></p>
-<h2 id="最终效果图"><a href="#最终效果图" class="headerlink" title="最终效果图"></a>最终效果图</h2><p><img src="/2023/03/17/i3wm_in_openeuler/layout.jpeg"></p>
-<h2 id="相关软件（包）"><a href="#相关软件（包）" class="headerlink" title="相关软件（包）"></a>相关软件（包）</h2><p><a href="https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/">i3wm</a><br><a href="https://code.visualstudio.com/docs/setup/linux">vscode</a><br><a href="https://github.com/dylanaraps/neofetch">neofetch</a><br><a href="https://gitee.com/mywaaagh_admin/i3configs">i3config</a></p>
-<h2 id="HOWTO"><a href="#HOWTO" class="headerlink" title="HOWTO"></a>HOWTO</h2><ol>
-<li><p>i3是基于X协议的，因此需要先安装X Server </p>
- <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-server</span><br></pre></td></tr></tbody></table></figure>
-</li>
-<li><p>同时i3也仅仅是一个window manager，一个完整的linux桌面环境（desktop environment）通常会包含<a href="https://wiki.archlinux.org/title/desktop_environment#Custom_environments">非常多的组件</a>，因此还需要安装一些基本组件</p>
- <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">dnf <span class="keyword">in</span> xorg-x11-drv-*  lightdm lightdm-gtk</span><br></pre></td></tr></tbody></table></figure></li>
-<li><p>最后，我们安装i3相关的组件</p>
- <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">curl -o /etc/yum.repos.d/i3wm.repo -L https://eur.openeuler.openatom.cn/coprs/mywaaagh_admin/i3wm/repo/openeuler-22.03/mywaaagh_admin-i3wm-openeuler-22.03.repo</span><br><span class="line">dnf <span class="keyword">in</span> i3 i3status i3blocks i3lock i3blocks-contrib xfce4-terminal xcompmgr acpi dmenu feh</span><br><span class="line">git <span class="built_in">clone</span> https://gitee.com/mywaaagh_admin/i3configs &amp;&amp; <span class="built_in">cd</span> i3configs &amp;&amp; sh install.sh</span><br></pre></td></tr></tbody></table></figure></li>
-<li><p>安装完成后，启动<code>lightdm</code></p>
- <figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> systemctl start lightdm</span><br></pre></td></tr></tbody></table></figure>
-<p> <img src="/2023/03/17/i3wm_in_openeuler/lightdm.png"></p>
-</li>
-</ol>
-<p>附一些i3的基本操作指令（下面的mod在通常的PC上是win键）</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">mod+d：调出dmenu，用于快速启动进程</span><br><span class="line">mod+enter：启动terminal</span><br><span class="line">mod+↑/mod+↓/mod+←/mod+→：调整focus的窗口</span><br><span class="line">mod+shift+q：关闭当前focus的窗口</span><br><span class="line">mod+shift+r：热加载配置文件</span><br><span class="line">mod+shift+e：关闭i3</span><br><span class="line">mod+shift+l：锁屏</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="在WSL中体验i3"><a href="#在WSL中体验i3" class="headerlink" title="在WSL中体验i3"></a>在WSL中体验i3</h2><p>除了在正常的linux虚拟机中使用i3，其实还可以通过<code>xrdp+mstsc</code>在WSL中体验i3</p>
-<ol>
-<li>参考 <a href="/2023/07/24/openEuler-DE-in-WSL/" title="如何在openEuler WSL中体验完整的桌面环境">如何在openEuler WSL中体验完整的桌面环境</a> 来在<code>WSL</code>中安装<code>xrdp</code>并成功启动</li>
-<li>在$HOME目录下创建 .xsession，并给与执行权限 <figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">$ echo 'exec i3' &gt; $HOME/.xsession</span><br><span class="line">$ chmod +x $HOME/.xsession</span><br></pre></td></tr></tbody></table></figure></li>
-<li>通过<code>mstsc</code>远程桌面链接WSL，目标IP可以通过 <code>ip a</code>命令查看</li>
-<li>链接协议选择<code>Xvnc</code>，输入正确的用户名密码后，即可进入i3的界面啦</li>
-</ol>
-]]></content>
-      <tags>
-        <tag>tiling window manager</tag>
-        <tag>openEuler</tag>
-        <tag>i3</tag>
       </tags>
   </entry>
   <entry>
