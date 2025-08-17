@@ -1,6 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>runc 源码分析-1 概述</title>
+    <url>/2017/05/11/analysis-1/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
+<ul>
+<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
+<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
+<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
+</ul>
+<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
+<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
+<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
+<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
+<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
+<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
+<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
+
+<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
+]]></content>
+      <tags>
+        <tag>container</tag>
+        <tag>oci</tag>
+        <tag>rkt</tag>
+        <tag>docker</tag>
+        <tag>k8s</tag>
+        <tag>golang</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>大教堂与集市</title>
     <url>/2025/08/17/The-Cathedral-the-Bazaa/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="第一章-教堂与市集"><a href="#第一章-教堂与市集" class="headerlink" title="第一章 教堂与市集"></a>第一章 教堂与市集</h1><p>Linux 打破了许多软件开发的传统，这个世界级的操作系统在五年前（1991 年）仅仅靠着如丝般的互联网，神奇地联合了散布在全世界数以千计兼职的玩家们来开发它，谁曾料到会发生这样的事情呢？</p>
@@ -310,34 +338,6 @@
 此外，「SNAFU原则」预测在需要授权的组织中，决策者与现实会慢慢脱节，对决策者的资讯太多会变成善意的谎言。这情形在传统的软件开发很容易见到，劣等者有强烈动机隐瞒、忽视与简化问题。当这过程变成产品是，那会是一个大灾难。<a href="#fnref:19" rev="footnote"> ↩</a></span></li><li id="fn:20"><span style="display: inline-block; vertical-align: top; padding-right: 10px; margin-left: -40px">20.</span><span style="display: inline-block; vertical-align: top; margin-left: 10px;">指管理者也会害怕自己成为漫画中那个老板。 ―― 译注。<a href="#fnref:20" rev="footnote"> ↩</a></span></li></ol></div></div>]]></content>
       <tags>
         <tag>open source</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>runc 源码分析-1 概述</title>
-    <url>/2017/05/11/analysis-1/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h2 id="runc-是什么"><a href="#runc-是什么" class="headerlink" title="runc 是什么"></a>runc 是什么</h2><p>最近在协助其他部门开发基于Android的容器方案，有机会深入接触了下<code>kernel</code>，<code>docker</code>等项目，发现容器的现状比起我14年刚毕业时，已经大不一样了</p>
-<ul>
-<li>容器的工业级标准化组织OCI(Open Container Initiative)出炉，这是业界大佬为避免容器生态和<code>docker</code>耦合过紧做的努力，也是docker做出的妥协</li>
-<li>随着docker等容器引擎自身功能越来越丰富，其逐渐呈现出组件化的趋势（将底层交给OCI，自己则专注网络，配置管理，集群，编排，安全等方面）</li>
-<li>内核中关于容器的开发也如火如荼，包括 capabilities, fs, net, uevent等和容器相关的子系统，代码增长都迎来了第二春</li>
-</ul>
-<p>如上所说，随着<code>libcontainer</code>从docker引擎中解耦并贡献给OCI后，runc实际上已经成为了第一个<a href="https://github.com/opencontainers/runtime-spec">OCI runtime spec</a>的实现。<br>可以说，任何<code>OCI runtime spec</code>的实现，都能通过自己是提供的关于容器的接口实现容器的起停，资源管理等功能。</p>
-<h2 id="runc-在容器引擎中的位置"><a href="#runc-在容器引擎中的位置" class="headerlink" title="runc 在容器引擎中的位置"></a>runc 在容器引擎中的位置</h2><p>docker为了兼容<code>OCI runtime spec</code>，在1.11版本后，将runc与<code>docker daemon</code>独立开来，作为实际的管理、操作容器的底层组件。</p>
-<p>下图就是runc出现前后，docker架构的变化。<br><br><img src="/images/rkt-vs-docker-process-model.png" alt="runc-in-docker-engine-process"></p>
-<p>如下图所示，<code>runc</code>在容器引擎中，仅负责容器生命周期的管理和配置（在docker中，受<code>containerd</code>调用）；由于runc本身已经具备了容器基本的管理能力，因而docker，rkt等则能更加关注于对容器的网络管理，编排等领域。<br><br><img src="/images/runc-in-docker.png" alt="runc-in-docker-arch"></p>
-<h2 id="runc-的意义"><a href="#runc-的意义" class="headerlink" title="runc 的意义"></a>runc 的意义</h2><p>runc符合<code>OCI runtime spec</code>，同时目前也一直在社区中进行着维护。<br>根据OCI的文档，任何实现了<code>OCI runtime spec</code>的组件，都可以替换<code>runc</code>在容器引擎中的位置，因此，这也可以说是给业界提供了一个Production-Grade的DEMO。（类似的，k8s最近终于引入了一个兼容层，开始将自己和docker/rkt解耦合；另：当前docker版本(1.12)中，也已经可以通过参数替换<code>oci runtime</code>了）。</p>
-<h2 id="runc的代码结构"><a href="#runc的代码结构" class="headerlink" title="runc的代码结构"></a>runc的代码结构</h2><p>如果看一下 runc目录中<code>.go</code>文件的名称和<code>runc help</code>中 command的名称，可以发现runc代码的目录还是很清晰的，基本每一个<code>.go</code>文件，就对应了一个command</p>
-<figure class="highlight bash"><table><tbody><tr><td class="code"><pre><span class="line">% tree -L 1 </span><br><span class="line">.</span><br><span class="line">├── checkpoint.go</span><br><span class="line">├── contrib</span><br><span class="line">├── CONTRIBUTING.md</span><br><span class="line">├── create.go</span><br><span class="line">├── delete.go</span><br><span class="line">├── Dockerfile</span><br><span class="line">├── events.go</span><br><span class="line">├── exec.go</span><br><span class="line">├── init.go</span><br><span class="line">├── kill.go</span><br><span class="line">├── libcontainer</span><br><span class="line">├── LICENSE</span><br><span class="line">├── list.go</span><br><span class="line">├── main.go</span><br><span class="line">├── MAINTAINERS</span><br><span class="line">├── MAINTAINERS_GUIDE.md</span><br><span class="line">├── Makefile</span><br><span class="line">├── man</span><br><span class="line">├── NOTICE</span><br><span class="line">├── notify_socket.go</span><br><span class="line">├── pause.go</span><br><span class="line">├── PRINCIPLES.md</span><br><span class="line">├── ps.go</span><br><span class="line">├── README.md</span><br><span class="line">├── restore.go</span><br><span class="line">├── rlimit_linux.go</span><br><span class="line">├── run.go</span><br><span class="line">├── script</span><br><span class="line">├── signals.go</span><br><span class="line">├── spec.go</span><br><span class="line">├── start.go</span><br><span class="line">├── state.go</span><br><span class="line">├── tests</span><br><span class="line">├── tty.go</span><br><span class="line">├── update.go</span><br><span class="line">├── utils.go</span><br><span class="line">├── utils_linux.go</span><br><span class="line">├── vendor</span><br><span class="line">├── vendor.conf</span><br><span class="line">└── VERSION</span><br></pre></td></tr></tbody></table></figure>
-
-<p>后续本文将会逐步进入runc的代码，摸清<code>runc</code>运行时的各个方面。</p>
-]]></content>
-      <tags>
-        <tag>container</tag>
-        <tag>oci</tag>
-        <tag>rkt</tag>
-        <tag>docker</tag>
-        <tag>k8s</tag>
-        <tag>golang</tag>
       </tags>
   </entry>
   <entry>
