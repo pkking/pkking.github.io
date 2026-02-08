@@ -218,7 +218,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2026/02/08/The-Cathedral-the-Bazaa/">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2026/02/08/dotfiles/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
@@ -236,7 +236,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/02/08/The-Cathedral-the-Bazaa/" class="post-title-link" itemprop="url">大教堂与集市</a>
+          <a href="/2026/02/08/dotfiles/" class="post-title-link" itemprop="url">我的开发环境：pkking/dotfiles 配置解析</a>
         </h2>
 
         <div class="post-meta-container">
@@ -246,8 +246,9 @@
         <i class="far fa-calendar"></i>
       </span>
       <span class="post-meta-item-text">发表于</span>
+      
 
-      <time title="创建时间：2026-02-08 22:52:07" itemprop="dateCreated datePublished" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="创建时间：2026-02-08 12:00:00 / 修改时间：22:57:29" itemprop="dateCreated datePublished" datetime="2026-02-08T12:00:00+08:00">2026-02-08</time>
     </span>
 
   
@@ -259,8 +260,137 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2026/02/08/The-Cathedral-the-Bazaa/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2026/02/08/The-Cathedral-the-Bazaa/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2026/02/08/dotfiles/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2026/02/08/dotfiles/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><p>配置开发环境通常很麻烦。每次换新电脑或重装系统，都要重新装一遍软件、改配置、配路径，折腾大半天。为了省掉这些重复劳动，我把自己的配置整理成了 <a target="_blank" rel="noopener" href="https://github.com/pkking/dotfiles">dotfiles</a> 项目。</p>
+<p>这篇文章不谈大道理，只聊聊我的配置里有什么，以及我是怎么让它们在不同机器上跑起来的。</p>
+<p>在深入细节之前，先简单聊聊两个核心概念：<strong>dotfiles</strong> 和 <strong>IaC</strong>。</p>
+<ul>
+<li><strong>dotfiles</strong>：指的是系统中那些以“点”开头的隐藏配置文件（如 <code>.zshrc</code>, <code>.gitconfig</code>）。它们就像是软件的“基因”，定义了你所有工具的行为模式和操作逻辑。</li>
+<li><strong>IaC (Infrastructure as Code)</strong>：原本是服务器运维领域“以代码定义基础设施”的思想。将其应用到个人开发环境，意味着你的软件安装和配置不再是手动点点点，而是通过可阅读、可执行的代码来定义。</li>
+</ul>
+<hr>
+<h2 id="为什么折腾-dotfiles？"><a href="#为什么折腾-dotfiles？" class="headerlink" title="为什么折腾 dotfiles？"></a>为什么折腾 dotfiles？</h2><p>如果你只有一台电脑，且环境永远不出问题，那确实没必要折腾。但在实际工作中，我发现环境管理是避不开的需求。</p>
+<p><strong>不再重复修补系统状态</strong><br>以前我的配置散落在 <code>$HOME</code> 的各个角落，改个快捷键就像在给系统“打补丁”。现在我把配置看作代码，所有修改都有迹可循，再也不怕改乱了找不回来。</p>
+<p><strong>习惯的延续性</strong><br>我经常在公司工作站、家里笔记本和远程开发机之间切换。肌肉记忆是很诚实的，统一的环境能让我把精力留在代码本身，而不是工具操作上。</p>
+<p><strong>快速“回血”的底气</strong><br>重装系统不再是灾难。有了这套 dotfiles，我能在 15 分钟内找回绝大部分工作状态。这种确定性比什么都重要。</p>
+<hr>
+<h2 id="核心工具链"><a href="#核心工具链" class="headerlink" title="核心工具链"></a>核心工具链</h2><p>这套配置的核心理念是“现代、极简、自动化”。</p>
+<h3 id="1-管理核心：Chezmoi"><a href="#1-管理核心：Chezmoi" class="headerlink" title="1. 管理核心：Chezmoi"></a>1. 管理核心：Chezmoi</h3><p>我没用传统的 <code>ln -s</code> 脚本，而是选择了 <a target="_blank" rel="noopener" href="https://www.chezmoi.io/">Chezmoi</a>。它不仅能管理软链接，还能处理模板。比如，它能根据主机名自动切换 Git 邮箱（公司用公司邮箱，家里用私人的）。它还能配合 Bitwarden 管理 API Key，不用担心把私密信息传到公开仓库。</p>
+<h3 id="2-终端：Zsh-Tmux-Starship"><a href="#2-终端：Zsh-Tmux-Starship" class="headerlink" title="2. 终端：Zsh + Tmux + Starship"></a>2. 终端：Zsh + Tmux + Starship</h3><p>Zsh 负责交互，Tmux 负责会话持久化（断网也不怕进程挂掉），Starship 负责美化 Prompt。Starship 是用 Rust 写的，非常快，能一眼看到 Git 分支和运行环境状态。</p>
+<h3 id="3-版本管理：Mise-强烈推荐"><a href="#3-版本管理：Mise-强烈推荐" class="headerlink" title="3. 版本管理：Mise (强烈推荐)"></a>3. 版本管理：Mise (强烈推荐)</h3><p>这是我最喜欢的工具，它替代了 nvm、pyenv 等一堆语言管理工具。一个 <code>mise.toml</code> 就能搞定所有环境，性能比 asdf 好得多，而且不需要处理烦人的 shims。我的配置里预设了 Python 3.13 和 Node 24，开箱即用。</p>
+<h3 id="4-字体与美学：Monaspace"><a href="#4-字体与美学：Monaspace" class="headerlink" title="4. 字体与美学：Monaspace"></a>4. 字体与美学：Monaspace</h3><p>为了盯着代码不疲劳，我选了 GitHub 的 Monaspace 字体。它支持连字，而且在不同字重下表现都很稳。配合 Xresources 配置，整套系统的配色很和谐。</p>
+<hr>
+<h2 id="为什么这套方案值得折腾？"><a href="#为什么这套方案值得折腾？" class="headerlink" title="为什么这套方案值得折腾？"></a>为什么这套方案值得折腾？</h2><p>很多人觉得配置环境是一次性的工作，但实际上，它的价值体现在长期的开发收益上：</p>
+<ul>
+<li><strong>告别环境漂移</strong>：无论是在公司工作站还是家里，你的 Shell 插件、别名和工具版本永远同步，彻底消除“这套配置在那台机器上怎么没效”的烦恼。</li>
+<li><strong>版本控制与实验</strong>：配置即代码，这意味着你可以利用 Git 的提交历史来实验新的方案。尝试新插件改挂了？直接 <code>git reset</code> 就能瞬间恢复。</li>
+<li><strong>极速扩容</strong>：如果你需要同时维护多台远程开发机，或者经常在 Docker 容器里工作，这套方案能让你在秒级时间内克隆出一个完全熟悉的操作界面。</li>
+<li><strong>降低认知负担</strong>：你不再需要记住几年前是怎么配置那个特定工具的，代码就是最好的文档。这种“确定性”带来的心理安全感是无价的。</li>
+</ul>
+<hr>
+<h2 id="部署流程"><a href="#部署流程" class="headerlink" title="部署流程"></a>部署流程</h2><p>这套配置追求的是“一键搞定”。在新机器上的操作流程如下：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 装好 Chezmoi 和 Starship</span></span><br><span class="line">sh -c <span class="string">"<span class="subst">$(curl -fsLS get.chezmoi.io)</span>"</span> -- -b <span class="variable">$HOME</span>/.local/bin</span><br><span class="line">curl -sS https://starship.rs/install.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 拉取配置并初始化</span></span><br><span class="line">chezmoi init pkking</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 应用配置</span></span><br><span class="line">chezmoi apply</span><br></pre></td></tr></tbody></table></figure>
+
+<p>应用配置后，Chezmoi 会自动调用脚本安装系统依赖。所有语言环境（Python、Node、Go）都会由 Mise 自动下载安装。你不需要手动去搜怎么装 Node，也不用忍受系统源里那些老旧的版本。所有逻辑都定义在 <code>dot_config/mise.toml</code> 中，保证了多台机器的环境绝对一致。</p>
+<hr>
+<h2 id="一点维护心得"><a href="#一点维护心得" class="headerlink" title="一点维护心得"></a>一点维护心得</h2><ol>
+<li><strong>保持解耦</strong>：各个组件的配置应该尽量独立。更换一个工具（比如换个终端模拟器）不应该影响到你的 Shell 或其他工作流。</li>
+<li><strong>尊重默认值</strong>：不要把工具改得面目全非。尽量保持软件的原生逻辑，只针对真正的痛点做定制。这样在环境极度受限时，你也能保持基本的战斗力。</li>
+<li><strong>保持轻量</strong>：我利用 Chezmoi 的 external 功能自动拉取上游插件（如 oh-my-zsh），这样我的主仓库里只存逻辑，不存第三方代码。</li>
+</ol>
+<p>维护一套 dotfiles 是个持续的过程。如果你也在烦恼 Linux 环境管理，可以试试 Chezmoi + Mise 的组合。把时间留给创造，而不是留给琐碎的配置。</p>
+<p>欢迎去 <a target="_blank" rel="noopener" href="https://github.com/pkking/dotfiles">GitHub</a> 交流。</p>
+<p>Happy Hacking!</p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2024/09/20/The-Cathedral-the-Bazaa/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+      <meta itemprop="name" content="Chaoran">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | a cup of waaagh">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2024/09/20/The-Cathedral-the-Bazaa/" class="post-title-link" itemprop="url">大教堂与集市</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-09-20 12:00:00" itemprop="dateCreated datePublished" datetime="2024-09-20T12:00:00+08:00">2024-09-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2024/09/20/The-Cathedral-the-Bazaa/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2024/09/20/The-Cathedral-the-Bazaa/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -604,129 +734,6 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2026/02/08/dotfiles/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
-      <meta itemprop="name" content="Chaoran">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="a cup of waaagh">
-      <meta itemprop="description" content="some notions">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | a cup of waaagh">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/02/08/dotfiles/" class="post-title-link" itemprop="url">我的开发环境：pkking/dotfiles 配置解析</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-      
-
-      <time title="创建时间：2026-02-08 12:00:00 / 修改时间：22:52:07" itemprop="dateCreated datePublished" datetime="2026-02-08T12:00:00+08:00">2026-02-08</time>
-    </span>
-
-  
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Disqus：</span>
-    
-    <a title="disqus" href="/2026/02/08/dotfiles/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2026/02/08/dotfiles/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><p>配置开发环境通常很麻烦。每次换新电脑或重装系统，都要重新装一遍软件、改配置、配路径，折腾大半天。为了省掉这些重复劳动，我把自己的配置整理成了 <a target="_blank" rel="noopener" href="https://github.com/pkking/dotfiles">dotfiles</a> 项目。</p>
-<p>这篇文章不谈大道理，只聊聊我的配置里有什么，以及我是怎么让它们在不同机器上跑起来的。</p>
-<p>在深入细节之前，先简单聊聊两个核心概念：<strong>dotfiles</strong> 和 <strong>IaC</strong>。</p>
-<ul>
-<li><strong>dotfiles</strong>：指的是系统中那些以“点”开头的隐藏配置文件（如 <code>.zshrc</code>, <code>.gitconfig</code>）。它们就像是软件的“基因”，定义了你所有工具的行为模式和操作逻辑。</li>
-<li><strong>IaC (Infrastructure as Code)</strong>：原本是服务器运维领域“以代码定义基础设施”的思想。将其应用到个人开发环境，意味着你的软件安装和配置不再是手动点点点，而是通过可阅读、可执行的代码来定义。</li>
-</ul>
-<hr>
-<h2 id="为什么折腾-dotfiles？"><a href="#为什么折腾-dotfiles？" class="headerlink" title="为什么折腾 dotfiles？"></a>为什么折腾 dotfiles？</h2><p>如果你只有一台电脑，且环境永远不出问题，那确实没必要折腾。但在实际工作中，我发现环境管理是避不开的需求。</p>
-<p><strong>不再重复修补系统状态</strong><br>以前我的配置散落在 <code>$HOME</code> 的各个角落，改个快捷键就像在给系统“打补丁”。现在我把配置看作代码，所有修改都有迹可循，再也不怕改乱了找不回来。</p>
-<p><strong>习惯的延续性</strong><br>我经常在公司工作站、家里笔记本和远程开发机之间切换。肌肉记忆是很诚实的，统一的环境能让我把精力留在代码本身，而不是工具操作上。</p>
-<p><strong>快速“回血”的底气</strong><br>重装系统不再是灾难。有了这套 dotfiles，我能在 15 分钟内找回绝大部分工作状态。这种确定性比什么都重要。</p>
-<hr>
-<h2 id="核心工具链"><a href="#核心工具链" class="headerlink" title="核心工具链"></a>核心工具链</h2><p>这套配置的核心理念是“现代、极简、自动化”。</p>
-<h3 id="1-管理核心：Chezmoi"><a href="#1-管理核心：Chezmoi" class="headerlink" title="1. 管理核心：Chezmoi"></a>1. 管理核心：Chezmoi</h3><p>我没用传统的 <code>ln -s</code> 脚本，而是选择了 <a target="_blank" rel="noopener" href="https://www.chezmoi.io/">Chezmoi</a>。它不仅能管理软链接，还能处理模板。比如，它能根据主机名自动切换 Git 邮箱（公司用公司邮箱，家里用私人的）。它还能配合 Bitwarden 管理 API Key，不用担心把私密信息传到公开仓库。</p>
-<h3 id="2-终端：Zsh-Tmux-Starship"><a href="#2-终端：Zsh-Tmux-Starship" class="headerlink" title="2. 终端：Zsh + Tmux + Starship"></a>2. 终端：Zsh + Tmux + Starship</h3><p>Zsh 负责交互，Tmux 负责会话持久化（断网也不怕进程挂掉），Starship 负责美化 Prompt。Starship 是用 Rust 写的，非常快，能一眼看到 Git 分支和运行环境状态。</p>
-<h3 id="3-版本管理：Mise-强烈推荐"><a href="#3-版本管理：Mise-强烈推荐" class="headerlink" title="3. 版本管理：Mise (强烈推荐)"></a>3. 版本管理：Mise (强烈推荐)</h3><p>这是我最喜欢的工具，它替代了 nvm、pyenv 等一堆语言管理工具。一个 <code>mise.toml</code> 就能搞定所有环境，性能比 asdf 好得多，而且不需要处理烦人的 shims。我的配置里预设了 Python 3.13 和 Node 24，开箱即用。</p>
-<h3 id="4-字体与美学：Monaspace"><a href="#4-字体与美学：Monaspace" class="headerlink" title="4. 字体与美学：Monaspace"></a>4. 字体与美学：Monaspace</h3><p>为了盯着代码不疲劳，我选了 GitHub 的 Monaspace 字体。它支持连字，而且在不同字重下表现都很稳。配合 Xresources 配置，整套系统的配色很和谐。</p>
-<hr>
-<h2 id="为什么这套方案值得折腾？"><a href="#为什么这套方案值得折腾？" class="headerlink" title="为什么这套方案值得折腾？"></a>为什么这套方案值得折腾？</h2><p>很多人觉得配置环境是一次性的工作，但实际上，它的价值体现在长期的开发收益上：</p>
-<ul>
-<li><strong>告别环境漂移</strong>：无论是在公司工作站还是家里，你的 Shell 插件、别名和工具版本永远同步，彻底消除“这套配置在那台机器上怎么没效”的烦恼。</li>
-<li><strong>版本控制与实验</strong>：配置即代码，这意味着你可以利用 Git 的提交历史来实验新的方案。尝试新插件改挂了？直接 <code>git reset</code> 就能瞬间恢复。</li>
-<li><strong>极速扩容</strong>：如果你需要同时维护多台远程开发机，或者经常在 Docker 容器里工作，这套方案能让你在秒级时间内克隆出一个完全熟悉的操作界面。</li>
-<li><strong>降低认知负担</strong>：你不再需要记住几年前是怎么配置那个特定工具的，代码就是最好的文档。这种“确定性”带来的心理安全感是无价的。</li>
-</ul>
-<hr>
-<h2 id="部署流程"><a href="#部署流程" class="headerlink" title="部署流程"></a>部署流程</h2><p>这套配置追求的是“一键搞定”。在新机器上的操作流程如下：</p>
-<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 装好 Chezmoi 和 Starship</span></span><br><span class="line">sh -c <span class="string">"<span class="subst">$(curl -fsLS get.chezmoi.io)</span>"</span> -- -b <span class="variable">$HOME</span>/.local/bin</span><br><span class="line">curl -sS https://starship.rs/install.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 拉取配置并初始化</span></span><br><span class="line">chezmoi init pkking</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 应用配置</span></span><br><span class="line">chezmoi apply</span><br></pre></td></tr></tbody></table></figure>
-
-<p>应用配置后，Chezmoi 会自动调用脚本安装系统依赖。所有语言环境（Python、Node、Go）都会由 Mise 自动下载安装。你不需要手动去搜怎么装 Node，也不用忍受系统源里那些老旧的版本。所有逻辑都定义在 <code>dot_config/mise.toml</code> 中，保证了多台机器的环境绝对一致。</p>
-<hr>
-<h2 id="一点维护心得"><a href="#一点维护心得" class="headerlink" title="一点维护心得"></a>一点维护心得</h2><ol>
-<li><strong>保持解耦</strong>：各个组件的配置应该尽量独立。更换一个工具（比如换个终端模拟器）不应该影响到你的 Shell 或其他工作流。</li>
-<li><strong>尊重默认值</strong>：不要把工具改得面目全非。尽量保持软件的原生逻辑，只针对真正的痛点做定制。这样在环境极度受限时，你也能保持基本的战斗力。</li>
-<li><strong>保持轻量</strong>：我利用 Chezmoi 的 external 功能自动拉取上游插件（如 oh-my-zsh），这样我的主仓库里只存逻辑，不存第三方代码。</li>
-</ol>
-<p>维护一套 dotfiles 是个持续的过程。如果你也在烦恼 Linux 环境管理，可以试试 Chezmoi + Mise 的组合。把时间留给创造，而不是留给琐碎的配置。</p>
-<p>欢迎去 <a target="_blank" rel="noopener" href="https://github.com/pkking/dotfiles">GitHub</a> 交流。</p>
-<p>Happy Hacking!</p>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
     <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2023/08/29/stable-diffusion-webui/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -763,7 +770,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -904,7 +911,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1051,7 +1058,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -1166,7 +1173,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -1288,7 +1295,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -1405,7 +1412,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -1509,7 +1516,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
@@ -1623,7 +1630,7 @@
         <i class="far fa-calendar-check"></i>
       </span>
       <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2026-02-08 22:52:07" itemprop="dateModified" datetime="2026-02-08T22:52:07+08:00">2026-02-08</time>
+      <time title="修改时间：2026-02-08 22:57:29" itemprop="dateModified" datetime="2026-02-08T22:57:29+08:00">2026-02-08</time>
     </span>
 
   
