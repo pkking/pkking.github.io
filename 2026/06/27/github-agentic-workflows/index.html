@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"pkking.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12,"onmobile":false},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat","show_result":true},"fold":{"enable":false,"height":500},"language":false,"highlight_theme":"night eighties"},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="GitHub Agentic Workflows（gh-aw）把自然语言 Markdown 编译成 Actions YAML，并用 safe-outputs 把 AI 写权限收进可审计白名单。本文拆解它的编译机制、安全边界、适用场景与成本。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GitHub Agentic Workflows 深度解析：不只是&quot;用自然语言写 Actions&quot;">
+<meta property="og:url" content="https://pkking.github.io/2026/06/27/github-agentic-workflows/index.html">
+<meta property="og:site_name" content="a cup of waaagh">
+<meta property="og:description" content="GitHub Agentic Workflows（gh-aw）把自然语言 Markdown 编译成 Actions YAML，并用 safe-outputs 把 AI 写权限收进可审计白名单。本文拆解它的编译机制、安全边界、适用场景与成本。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://pkking.github.io/2026/06/27/github-agentic-workflows/cover.webp">
+<meta property="article:published_time" content="2026-06-27T15:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-27T17:46:36.509Z">
+<meta property="article:author" content="Chaoran">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agentic Workflows">
+<meta property="article:tag" content="Continuous AI">
+<meta property="article:tag" content="GitHub Actions">
+<meta property="article:tag" content="gh-aw">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pkking.github.io/2026/06/27/github-agentic-workflows/cover.webp">
+
+
+<link rel="canonical" href="https://pkking.github.io/2026/06/27/github-agentic-workflows/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://pkking.github.io/2026/06/27/github-agentic-workflows/","path":"2026/06/27/github-agentic-workflows/","title":"GitHub Agentic Workflows 深度解析：不只是\"用自然语言写 Actions\""}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>GitHub Agentic Workflows 深度解析：不只是"用自然语言写 Actions" | a cup of waaagh</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+  <script src="/lib/lozad.min.js" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"forest","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Source+Code+Pro:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;700&display=swap">
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">a cup of waaagh</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#GitHub-Agentic-Workflows-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9A%E4%BB%8E%E7%A0%94%E7%A9%B6-demonstrator-%E5%88%B0%E6%8A%80%E6%9C%AF%E9%A2%84%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">GitHub Agentic Workflows 是什么：从研究 demonstrator 到技术预览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E5%B0%8F%E5%B7%A5%E4%BD%9C%E6%B5%81%E9%95%BF%E4%BB%80%E4%B9%88%E6%A0%B7"><span class="nav-number">2.</span> <span class="nav-text">最小工作流长什么样</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gh-aw-%E7%9A%84%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6%EF%BC%9A%E5%AE%83%E6%98%AF%E4%B8%80%E4%B8%AA%E2%80%9C%E7%BC%96%E8%AF%91%E5%99%A8%E2%80%9D"><span class="nav-number">3.</span> <span class="nav-text">gh-aw 的核心机制：它是一个“编译器”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E5%85%A8%E6%98%AF%E5%AE%83%E7%9C%9F%E6%AD%A3%E7%9A%84%E5%B7%AE%E5%BC%82%E5%8C%96"><span class="nav-number">4.</span> <span class="nav-text">安全是它真正的差异化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E6%93%8E%E4%B8%AD%E7%AB%8B%EF%BC%9A%E4%B8%80%E4%BB%BD%E5%B7%A5%E4%BD%9C%E6%B5%81%EF%BC%8C%E6%8D%A2%E5%9B%9B%E4%B8%AA%E6%A8%A1%E5%9E%8B"><span class="nav-number">5.</span> <span class="nav-text">引擎中立：一份工作流，换四个模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E8%AF%A5%E7%94%A8%EF%BC%8C%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%88%AB%E7%A2%B0"><span class="nav-number">6.</span> <span class="nav-text">什么时候该用，什么时候别碰</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%88%90%E6%9C%AC%E5%92%8C%E7%9C%9F%E5%AE%9E%E8%90%BD%E5%9C%B0"><span class="nav-number">7.</span> <span class="nav-text">成本和真实落地</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E5%A4%A9%E5%B0%B1%E8%83%BD%E8%B7%91%E7%9A%84-starter"><span class="nav-number">8.</span> <span class="nav-text">今天就能跑的 starter</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%EF%BC%88FAQ%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">常见问题（FAQ）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#gh-aw-%E5%92%8C%E7%9B%B4%E6%8E%A5%E5%9C%A8-Actions-%E9%87%8C%E8%B7%91-Claude-Codex-CLI-%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F"><span class="nav-number">9.1.</span> <span class="nav-text">gh-aw 和直接在 Actions 里跑 Claude&#x2F;Codex CLI 有什么区别？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#gh-aw-%E8%83%BD%E6%9B%BF%E4%BB%A3%E4%BC%A0%E7%BB%9F%E7%9A%84-GitHub-Actions-YAML-%E5%90%97%EF%BC%9F"><span class="nav-number">9.2.</span> <span class="nav-text">gh-aw 能替代传统的 GitHub Actions YAML 吗？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#gh-aw-%E6%80%8E%E4%B9%88%E6%94%B6%E8%B4%B9%EF%BC%9F"><span class="nav-number">9.3.</span> <span class="nav-text">gh-aw 怎么收费？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%83%E7%8E%B0%E5%9C%A8%E8%83%BD%E4%B8%8A%E7%94%9F%E4%BA%A7%E5%90%97%EF%BC%9F"><span class="nav-number">9.4.</span> <span class="nav-text">它现在能上生产吗？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#safe-outputs-%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">9.5.</span> <span class="nav-text">safe-outputs 到底是什么？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E5%B0%BE%EF%BC%9A%E8%87%AA%E5%8A%A8%E5%8C%96%E4%B9%8B%E5%89%8D%EF%BC%8C%E5%85%88%E8%AF%BB%E6%87%82%E8%A2%AB%E8%87%AA%E5%8A%A8%E5%8C%96%E7%9A%84%E4%B8%9C%E8%A5%BF"><span class="nav-number">10.</span> <span class="nav-text">结尾：自动化之前，先读懂被自动化的东西</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">11.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#What%E2%80%99s-next"><span class="nav-number">12.</span> <span class="nav-text">What’s next</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Chaoran"
+      src="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+  <p class="site-author-name" itemprop="name">Chaoran</p>
+  <div class="site-description" itemprop="description">some notions</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">43</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/pkking" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;pkking" rel="noopener me" target="_blank"><i class="github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:pkwarcraft@gmail.com" title="E-Mail → mailto:pkwarcraft@gmail.com" rel="noopener me" target="_blank"><i class="envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2026/06/27/github-agentic-workflows/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+      <meta itemprop="name" content="Chaoran">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="GitHub Agentic Workflows 深度解析：不只是&quot;用自然语言写 Actions&quot; | a cup of waaagh">
+      <meta itemprop="description" content="GitHub Agentic Workflows（gh-aw）把自然语言 Markdown 编译成 Actions YAML，并用 safe-outputs 把 AI 写权限收进可审计白名单。本文拆解它的编译机制、安全边界、适用场景与成本。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          GitHub Agentic Workflows 深度解析：不只是"用自然语言写 Actions"<a href="https://github.com/pkking/pkking.github.io/edit/hexo/source/_posts/github-agentic-workflows.md" class="post-edit-link" title="编辑" rel="noopener" target="_blank"><i class="fa fa-pen-nib"></i></a>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-27 23:00:00" itemprop="dateCreated datePublished" datetime="2026-06-27T23:00:00+08:00">2026-06-27</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-06-28 01:46:36" itemprop="dateModified" datetime="2026-06-28T01:46:36+08:00">2026-06-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AI/" itemprop="url" rel="index"><span itemprop="name">AI</span></a>
+        </span>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2026/06/27/github-agentic-workflows/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2026/06/27/github-agentic-workflows/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+</div>
+
+            <div class="post-description">GitHub Agentic Workflows（gh-aw）把自然语言 Markdown 编译成 Actions YAML，并用 safe-outputs 把 AI 写权限收进可审计白名单。本文拆解它的编译机制、安全边界、适用场景与成本。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><link rel="stylesheet" type="text/css" href="/lib/hint.min.css"><p><img data-src="/2026/06/27/github-agentic-workflows/cover.webp" alt="GitHub Agentic Workflows gh-aw 封面图"></p>
+<p>GitHub Agentic Workflows（命令行叫 <code>gh-aw</code>）在 2026 年 2 月 13 日进入技术预览。大多数介绍把它说成”用自然语言写 GitHub Actions，少写 YAML”。这是对的，但只对了一成。如果你只记住这句话，会错过它真正值得重视的东西，也会在选型时犯方向性错误。</p>
+<p>我的判断很直接：<strong>gh-aw 的核心价值不在”用自然语言替代 YAML”——那是入口；它的核心是一个”编译器 + 安全边界”。它把一个本来无法审计、无法回滚的 AI agent，强行编译成一份可审查的 GitHub Actions YAML，并用 <code>safe-outputs</code> 白名单把 agent 的每一次写操作都收进一个留痕、可回滚、需人审的笼子里。</strong> 它不是让 AI 更强，是让 AI 更”可治理”。</p>
+<p>这篇文章拆解它的真实机制、安全模型、适用边界和成本，读完你能带走一个判断框架和一份今天就能跑的 starter。</p>
+<h2 id="GitHub-Agentic-Workflows-是什么：从研究-demonstrator-到技术预览"><a href="#GitHub-Agentic-Workflows-是什么：从研究-demonstrator-到技术预览" class="headerlink" title="GitHub Agentic Workflows 是什么：从研究 demonstrator 到技术预览"></a>GitHub Agentic Workflows 是什么：从研究 demonstrator 到技术预览</h2><p>先理清一个容易被混淆的点：gh-aw 有两个仓库、两个阶段。</p>
+<p>第一站是 <strong>GitHub Next</strong> 的研究项目（<code>githubnext/gh-aw</code>，页面在 githubnext.com/projects/agentic-workflows）。GitHub Next 是 GitHub 的 R&amp;D 预览实验室，他们把这个东西定位得很谦虚——原话是”not a product，not even a technical preview”，一个”research demonstrator”，用来探索 agentic 设计空间、学习什么有效什么无效。它甚至明确说自己有”sharp edges”（毛刺）：资源限制、工具可靠性、评估方法、安全性都还没收敛。</p>
+<p>第二站是 2026 年 2 月 13 日的<a target="_blank" rel="noopener" href="https://github.blog/ai-and-ml/automate-repository-tasks-with-github-agentic-workflows/">技术预览公告</a>，代码迁到 <code>github/gh-aw</code>（也就是你能在 GitHub 上直接装的那个），由 GitHub、Microsoft Research 和 Azure Core Upstream 联合推进。从”学习用的研究演示”升级到”请你来试的技术预览”。</p>
+<p>这条时间线本身就是个信息：<strong>它还很早期。</strong> 后面讲成本时你会看到，早期版本甚至因为计费 bug 被整个区间退役过。把它用在生产关键路径上，现在还太早。</p>
+<p>一句话定义它的机制：<strong>用自然语言 Markdown 写工作流，<code>gh aw compile</code> 把它编译成一份真实的 GitHub Actions YAML（带安全硬化），然后 Actions 调用一个 coding agent 引擎（Copilot / Claude / Codex / Gemini）在沙箱里执行。</strong> 注意”编译”这个词——它是理解 gh-aw 的钥匙。</p>
+<h2 id="最小工作流长什么样"><a href="#最小工作流长什么样" class="headerlink" title="最小工作流长什么样"></a>最小工作流长什么样</h2><p>先看一个能跑的最小例子，来自官方的”每日仓库状态报告”：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">on:</span><br><span class="line">  schedule: daily</span><br><span class="line"></span><br><span class="line">permissions:</span><br><span class="line">  contents: read</span><br><span class="line">  issues: read</span><br><span class="line">  pull-requests: read</span><br><span class="line"></span><br><span class="line">safe-outputs:</span><br><span class="line">  create-issue:</span><br><span class="line">    title-prefix: "[repo status] "</span><br><span class="line">    labels: [report]</span><br><span class="line"></span><br><span class="line">tools:</span><br><span class="line">  github:</span><br><span class="line">---</span><br><span class="line"></span><br><span class="line"># Daily Repo Status Report</span><br><span class="line"></span><br><span class="line">Create a daily status report for maintainers.</span><br><span class="line"></span><br><span class="line">Include</span><br><span class="line">- Recent repository activity (issues, PRs, discussions, releases, code changes)</span><br><span class="line">- Progress tracking, goal reminders and highlights</span><br><span class="line">- Project status and recommendations</span><br><span class="line">- Actionable next steps for maintainers</span><br><span class="line"></span><br><span class="line">Keep it concise and link to the relevant issues/PRs.</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这个文件分两部分：上半是 YAML frontmatter，下半是自然语言指令。frontmatter 里四个关键字段决定了这个 agent 的全部”边界”：</p>
+<ul>
+<li><code>on:</code> —— 什么时候触发（用的是你熟悉的 Actions 触发语法）。</li>
+<li><code>permissions:</code> —— 能访问什么。注意全是 <code>read</code>。</li>
+<li><code>safe-outputs:</code> —— agent 被允许向 GitHub “写”什么。这里只允许创建一个带前缀的 issue。</li>
+<li><code>tools:</code> —— agent 有哪些工具（MCP 工具、github、web-fetch 等）。</li>
+</ul>
+<p>下面那段 Markdown 就是给 agent 的”需求文档”。注意它的措辞——“Include”、”Keep it concise”——这是给一个<strong>人类队友</strong>的指令，不是逐行规格。官方把这叫”productive ambiguity”（有生产力的模糊）：一句”读覆盖率报告，补高价值测试”人能懂，agent 也能据此主动行动。gh-aw 的设计哲学就是：<strong>用自然语言表达那种”本就该模糊”的意图，再在团队上下文里安全地跑它。</strong></p>
+<h2 id="gh-aw-的核心机制：它是一个“编译器”"><a href="#gh-aw-的核心机制：它是一个“编译器”" class="headerlink" title="gh-aw 的核心机制：它是一个“编译器”"></a>gh-aw 的核心机制：它是一个“编译器”</h2><p>很多人停在”用自然语言写 Actions”这一层就走了。但 gh-aw 真正的设计是<strong>编译模型</strong>，理解成两层最清楚：</p>
+<ul>
+<li><code>.md</code> 文件是<strong>源码</strong>（意图）。</li>
+<li><code>.lock.yml</code> 是<strong>编译产物</strong>（一份真实的、带安全硬化的 GitHub Actions workflow）。</li>
+</ul>
+<p>你跑 <code>gh aw compile</code>，它读 <code>.md</code> 的 frontmatter，生成 <code>.lock.yml</code>。<strong>两个文件都要提交进仓库</strong>，而且官方让你在 <code>.gitattributes</code> 里标记 lock 文件是生成物、合并冲突时取 ours：</p>
+<figure class="highlight text"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.github/workflows/*.lock.yml linguist-generated=true merge=ours</span><br></pre></td></tr></tbody></table></figure>
+
+<p>这意味着什么？意味着 gh-aw <strong>没有绕过 GitHub Actions，而是叠在它上面</strong>。生成的就是标准 Actions workflow，你已有的 self-hosted runner、secrets、environments、审计日志、分支保护全都可以复用。迁移成本接近零——不是”换一个平台”，是”在你现有平台上多了一层”。</p>
+<p>也正因为是编译，所有安全检查发生在<strong>编译时</strong>：上下文变量替换被严格限制（防模板注入）、依赖 SHA 锁定、工具走 allowlist、权限最小化。这些问题在”运行时才发现”就晚了，gh-aw 把它们前移到编译这一步。</p>
+<p>整条流水线是这样的：</p>
+<pre><code class="highlight mermaid">flowchart LR
+    MD["📄 workflow.md&lt;br/&gt;(自然语言意图)"] --&gt; COMPILE["⚙️ gh aw compile&lt;br/&gt;(编译 + 安全检查)"]
+    COMPILE --&gt; LOCK["🔒 workflow.lock.yml&lt;br/&gt;(Actions YAML + 硬化)"]
+    LOCK --&gt; ACTIONS["▶️ GitHub Actions&lt;br/&gt;(沙箱执行)"]
+    ACTIONS --&gt; ENGINE["🤖 引擎&lt;br/&gt;Copilot/Claude/Codex/Gemini"]
+    ENGINE --&gt; SAFE["🛡️ safe-outputs&lt;br/&gt;只读 + 写白名单"]
+    SAFE --&gt; REVIEW["👁️ 人审&lt;br/&gt;(PR 永不自动合并)"]
+    REVIEW --&gt; RESULT["✅ 留痕产物&lt;br/&gt;(issue/PR/评论)"]</code></pre>
+
+<p>这条链有一个关键的认知升级点：<strong>.md 是给人读的意图，.lock.yml 是给 Actions 跑的、也是给人审的可执行产物。</strong> 你不必信任 agent 的”思考”，你只需要审那份生成的 YAML 和它请求的 safe-outputs。这是 gh-aw 区别于一切”黑盒 agent 产品”的地方——官方原话：”no hidden prompts or secret sauce”，生成的 YAML 完全可检视，行为端到端归你所有。</p>
+<h2 id="安全是它真正的差异化"><a href="#安全是它真正的差异化" class="headerlink" title="安全是它真正的差异化"></a>安全是它真正的差异化</h2><p>如果说编译器模型是”骨架”，那安全边界才是 gh-aw 的”灵魂”，也是它和”自己在 Actions 里跑个 Claude CLI”最本质的区别。</p>
+<p>先说对比对象。另一种常见做法是：在一个普通 Actions YAML 里直接 <code>run: claude</code> 或挂个 <code>claude-code-action</code>。这种做法的问题官方点得很直白——“often grants these agents more permission than is required”，<strong>过度授权</strong>。你为了能创建 PR，给了 agent 完整的 <code>GITHUB_TOKEN</code> 写权限，它能改任何东西。</p>
+<p>gh-aw 反过来，<strong>默认只读</strong>。agent 想往 GitHub 写任何东西，都必须通过 <code>safe-outputs</code>：这是一组<strong>预定义的、可审查的、经过清洗的 GitHub 操作</strong>——<code>create-pull-request</code>、<code>create-issue</code>、<code>add-comment</code>、<code>add-label</code> 等等。agent 没有”写”权限，它只能<strong>请求</strong>一个 safe-output，而这个请求本身经过安全层校验、留下人可见的产物（评论 / PR / 日志），而不是静默修改。</p>
+<p>它的威胁模型列得很实在：提示注入、恶意 MCP 服务器、恶意 agent、工具调用的副作用、数据外泄。对应的纵深防御好几层——最小权限 token、工具 allowlist、网络隔离、沙箱执行、MCP 代理过滤、能”否决”或”要求人审”的钩子。还有一条硬规则：<strong>pull requests 永远不会自动合并，人必须始终审查批准。</strong></p>
+<p>我为什么强调这一点？因为评估任何一个”agent 平台”时，真正决定它能不能上生产的从来不是”模型够不够强”，而是三个问题：<strong>默认权限是什么？副作用留不留痕？能不能回滚/人审？</strong> gh-aw 把这三个问题都用 Actions 二十年攒下的基建回答了。这是它最被低估的价值——不是”能用 AI”，是”让 AI 可治理”。</p>
+<h2 id="引擎中立：一份工作流，换四个模型"><a href="#引擎中立：一份工作流，换四个模型" class="headerlink" title="引擎中立：一份工作流，换四个模型"></a>引擎中立：一份工作流，换四个模型</h2><p>gh-aw 还有一个工程上很值钱的特性：<strong>引擎中立</strong>。同一份 <code>.md</code>，你可以配置 Copilot（默认）、Claude、Codex、Gemini 任意一个来跑。</p>
+<p>这不是噱头。它的实际用途有两个：<strong>可移植</strong>（你不被锁死在某一家的模型和定价上，今天用 Claude、明天换 Codex 不用重写工作流）和<strong>可对比</strong>（同一个仓库任务，让不同引擎跑，比较行为和护栏的差异——官方说这恰好是他们做研究 demonstrator 的动机之一：在近乎相同的输入下评估各 coding agent 的安全特性）。</p>
+<p>放在 2026 年这个模型每月都在洗牌的节点，”意图和引擎解耦”是个很务实的赌注。你的工作流沉淀的是<strong>仓库知识</strong>（该 triage 什么、文档该更新什么），而不是对某个模型的依赖。模型会过时，仓库知识不会。</p>
+<h2 id="什么时候该用，什么时候别碰"><a href="#什么时候该用，什么时候别碰" class="headerlink" title="什么时候该用，什么时候别碰"></a>什么时候该用，什么时候别碰</h2><p>gh-aw 官方反复强调一句话当心智模型：<strong>“如果仓库里某件重复的活能用文字描述清楚，那它可能就适合 agentic workflow。”</strong> 但更重要的判断是它和传统 CI/CD 的边界。</p>
+<p>官方明说:<strong>别拿 gh-aw 替代 YAML 写的 CI/CD</strong>(构建、测试、发布)。它和确定性流水线”用途基本不重叠”,是用来增强、不是替代。原因是根本性的–agent 靠”理解自然语言”行动,有歧义就有偏差,而构建/测试/发布要的是 100% 确定性、零幻觉——像 <a href="/2015/03/11/yocto/">Yocto 那种嵌入式构建</a> 或 <a href="/2015/02/18/how_to_build_gitcafe_pages_by_pelican/">本博客用 Pelican 搭建部署</a> 的链路，就该老老实实留给 YAML CI。把发布压在一个会“理解”指令的 agent 上，是拿钱和稳定性开玩笑。</p>
+<p>我把它收敛成一个三问决策框架，你拿到任何仓库任务先过一遍：</p>
+<pre><code class="highlight mermaid">flowchart TD
+    Q1{"这活是确定性的吗？&lt;br/&gt;(构建/测试/发布/lint)"}
+    Q1 --&gt;|是| YAML["✅ 用传统 Actions YAML&lt;br/&gt;(确定性 CI/CD)"]
+    Q1 --&gt;|否| Q2{"它重复、能文字描述、&lt;br/&gt;可审计吗？"}
+    Q2 --&gt;|是| GHAW["✅ 适合 gh-aw&lt;br/&gt;(triage/文档/测试补强/报告)"]
+    Q2 --&gt;|否| INTER["✅ 用交互式 agent&lt;br/&gt;(Claude Code / Cursor)&lt;br/&gt;别自动化"]
+    GHAW --&gt; COST{"预算能扛住&lt;br/&gt;每次 run 的 premium request？"}
+    COST --&gt;|能| SHIP["🚀 先从低风险输出开始&lt;br/&gt;(评论/草稿/报告)"]
+    COST --&gt;|否| YAML</code></pre>
+
+<p>落到具体场景，gh-aw 的甜区是这些”不起眼但费时”的维护活：issue triage 和打标、文档随代码同步、CI 失败后自动排查并提修复 PR、按覆盖率报告补测试、定期仓库健康报告。注意一个共同点——它们都是<strong>重复、协作、可审计、又没法用简单启发式表达</strong>的任务，恰好需要”一点判断力”。Home Assistant 的 Franck Nijhof 那句评价很到位：gh-aw 帮维护者做的是”judgment amplification”（判断力放大）——数千个 open issue 没人能逐个看，agent 帮你 surface 重要的。</p>
+<p>反过来，明确不该用：一次性任务（自动化不回本）、需要深度交互式探索的任务（agent 跑在 Actions 分钟级，不是实时的，不如开个 Claude Code 对话）、以及任何关键路径（钱、发布、安全）。</p>
+<h2 id="成本和真实落地"><a href="#成本和真实落地" class="headerlink" title="成本和真实落地"></a>成本和真实落地</h2><p>gh-aw 不是免费的午餐。它每次 run 都烧模型调用，有账可算。</p>
+<p>官方给了一个可量化的数字：用 Copilot 默认配置时，<strong>每次 workflow run 大约消耗 2 个 premium request</strong>——1 个给 agent 干活，1 个给 safe-output 做守卫检查。这意味着你不能像跑 <code>actions/checkout</code> 那样无脑高频触发，得算着用。目前 Copilot 的自动化使用还绑定在某个用户账号上，企业规模化要理清计费归属。</p>
+<p>还有个很现实的信号：<strong>版本 0.68.4 到 0.71.3 因为一个影响计费的 bug 被整个区间退役</strong>，官方催着升级。一个会算错钱的功能还在频繁出这类 bug，说明它离”稳”还有距离。我的建议是：现在就拿来玩、拿来试、拿来在低风险仓库里养工作流，但别让它碰生产关键路径，也别在没盯成本的情况下挂 <code>schedule: daily</code> 跑一晚上。</p>
+<p>真实落地的案例是有的，而且不是 demo 级：<strong>Home Assistant</strong>（GitHub 头部项目之一）用它分析 issue、聚焦重点；<strong>CNCF</strong>（云原生计算基金会，CTO Chris Aniszczyk 出面背书）用它做文档自动化和跨组织 reporting，称这是降低 AI 试验门槛的”cultural shift”；<strong>Carvana</strong> 这家企业用它做跨多仓库的工程改动。这些案例说明甜区是真的——开源维护和大型组织的”维护杂活”。</p>
+<p>官方还提供了一批设计模式可抄：ChatOps、DailyOps、IssueOps、MultiRepoOps、Orchestration 等，在 <a target="_blank" rel="noopener" href="https://github.github.com/gh-aw/blog/2026-01-12-welcome-to-pelis-agent-factory/">Peli’s Agent Factory</a> 里有导览。</p>
+<h2 id="今天就能跑的-starter"><a href="#今天就能跑的-starter" class="headerlink" title="今天就能跑的 starter"></a>今天就能跑的 starter</h2><p>如果你想动手，最小路径是三条命令：</p>
+<figure class="highlight bash"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 装 gh-aw 扩展（需要先有 gh CLI 并登录）</span></span><br><span class="line">gh extension install github/gh-aw</span><br><span class="line">gh aw version            <span class="comment"># 确认装好</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 建一个工作流（会生成 .md，你再编辑上面那段日报模板）</span></span><br><span class="line">gh aw new daily-repo-status</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 编译成 .lock.yml，本地可 watch 调试</span></span><br><span class="line">gh aw compile --watch</span><br><span class="line">gh aw run                <span class="comment"># 本地试跑</span></span><br><span class="line">gh aw logs daily-repo-status   <span class="comment"># 看运行日志</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>落地节奏我建议照官方的来，很稳：<strong>先从低风险输出开始</strong>（评论、草稿、报告），跑顺了再开 <code>create-pull-request</code>；编码类先做目标导向的小改进（重构、补测试），别一上来就让它做新功能。还有一条铁律——<strong>人要留在更大的循环里</strong>。gh-aw 的 agent 子循环是自主的，但仓库真正往前走靠的是人审它产出的 issue 和 PR。把 Markdown 当代码对待：小步提交、走 review、有意识地演进。</p>
+<h2 id="常见问题（FAQ）"><a href="#常见问题（FAQ）" class="headerlink" title="常见问题（FAQ）"></a>常见问题（FAQ）</h2><h3 id="gh-aw-和直接在-Actions-里跑-Claude-Codex-CLI-有什么区别？"><a href="#gh-aw-和直接在-Actions-里跑-Claude-Codex-CLI-有什么区别？" class="headerlink" title="gh-aw 和直接在 Actions 里跑 Claude/Codex CLI 有什么区别？"></a>gh-aw 和直接在 Actions 里跑 Claude/Codex CLI 有什么区别？</h3><p>核心区别在权限模型。自己跑 CLI 通常给 agent 完整 <code>GITHUB_TOKEN</code> 写权限，过度授权；gh-aw 默认只读，所有写操作走 <code>safe-outputs</code> 白名单，每个 PR/评论都是预批准的可审查动作，且 PR 永不自动合并。一句话：前者默认放权，后者默认安全。</p>
+<h3 id="gh-aw-能替代传统的-GitHub-Actions-YAML-吗？"><a href="#gh-aw-能替代传统的-GitHub-Actions-YAML-吗？" class="headerlink" title="gh-aw 能替代传统的 GitHub Actions YAML 吗？"></a>gh-aw 能替代传统的 GitHub Actions YAML 吗？</h3><p>不能，也不该。官方明确说它和确定性 CI/CD（构建/测试/发布）用途基本不重叠，是用来增强不是替代。确定性任务用 YAML，需要”一点判断力”的重复维护活才用 gh-aw。</p>
+<h3 id="gh-aw-怎么收费？"><a href="#gh-aw-怎么收费？" class="headerlink" title="gh-aw 怎么收费？"></a>gh-aw 怎么收费？</h3><p>用 Copilot 默认配置时，每次 run 大约消耗 2 个 premium request（1 个 agent + 1 个 safe-output 守卫检查）。模型可配置以控制成本。目前自动化 Copilot 使用绑定用户账号，其他引擎见官方引擎文档。注意早期版本（0.68.4–0.71.3）有计费 bug，需升级到最新版。</p>
+<h3 id="它现在能上生产吗？"><a href="#它现在能上生产吗？" class="headerlink" title="它现在能上生产吗？"></a>它现在能上生产吗？</h3><p>谨慎。它 2026 年 2 月才进技术预览，官方自己承认有”sharp edges”（资源限制、工具可靠性、评估、安全都未收敛），还出现过计费 bug 退役区间。建议先在低风险仓库、低风险输出（评论/草稿/报告）上试，关键路径再等等。</p>
+<h3 id="safe-outputs-到底是什么？"><a href="#safe-outputs-到底是什么？" class="headerlink" title="safe-outputs 到底是什么？"></a>safe-outputs 到底是什么？</h3><p>一组预定义、可审查、经过清洗的 GitHub 写操作（如 <code>create-pull-request</code>、<code>create-issue</code>、<code>add-comment</code>、<code>add-label</code>）。agent 没有写权限，只能”请求”执行某个 safe-output，请求经安全层校验并留人可见产物。它是 gh-aw 权限模型的核心，不是可选装饰。</p>
+<h2 id="结尾：自动化之前，先读懂被自动化的东西"><a href="#结尾：自动化之前，先读懂被自动化的东西" class="headerlink" title="结尾：自动化之前，先读懂被自动化的东西"></a>结尾：自动化之前，先读懂被自动化的东西</h2><p>gh-aw 把开源维护里那些”不起眼但费时”的杂活–triage、文档同步、测试补强–变成了可编译、可审计、可回滚的自动化。这确实是好事。但有个反面值得记住:这些杂活之所以存在,是因为开源本来是靠人的判断和社区凝聚运转的。在你急着把它们自动化掉之前,值得先回头读懂那套人本逻辑——我推荐读一读<a href="/2024/09/20/The-Cathedral-the-Bazaa/">《大教堂与集市》</a>。</p>
+<p>gh-aw 不是终点，compile 这一步本身就是过渡态——官方的愿景是”有一天 commit 一个 .md 进 <code>.github/workflows</code>，agentic 的事就自动开始发生，就像今天的 YAML 一样”。在那一天到来前，它是个值得你装上、在低风险仓库里养工作流的研究预览。装上它，审那份 lock.yml，从一条日报 issue 开始。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/github/gh-aw">GitHub Agentic Workflows 仓库（github/gh-aw）</a> — 技术预览版代码与 README</li>
+<li><a target="_blank" rel="noopener" href="https://github.blog/ai-and-ml/automate-repository-tasks-with-github-agentic-workflows/">技术预览公告（GitHub Blog, 2026-02-13）</a> — 官方发布说明</li>
+<li><a target="_blank" rel="noopener" href="https://githubnext.com/projects/agentic-workflows/">GitHub Next 项目页（githubnext.com）</a> — 研究 demonstrator 阶段的设计哲学与”为何不是产品”</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx">How They Work 文档</a> — 工作流结构与安全设计</li>
+<li><a target="_blank" rel="noopener" href="https://github.github.com/gh-aw/blog/2026-01-12-welcome-to-pelis-agent-factory/">Peli’s Agent Factory</a> — 工作流模式导览</li>
+</ul>
+<h2 id="What’s-next"><a href="#What’s-next" class="headerlink" title="What’s next"></a>What’s next</h2><ul>
+<li><a href="/2024/09/20/The-Cathedral-the-Bazaa/">《大教堂与集市》</a> — 本文讲了“自动化维护杂活”，那篇讲开源靠人凝聚的本来面貌。自动化之前，先读懂被自动化的东西。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/GitHub-Actions/" rel="tag"># GitHub Actions</a>
+              <a href="/tags/Agentic-Workflows/" rel="tag"># Agentic Workflows</a>
+              <a href="/tags/gh-aw/" rel="tag"># gh-aw</a>
+              <a href="/tags/AI/" rel="tag"># AI</a>
+              <a href="/tags/Continuous-AI/" rel="tag"># Continuous AI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/02/08/dotfiles/" rel="prev" title="我的开发环境：pkking&#x2F;dotfiles 配置解析">
+                  <i class="fa fa-angle-left"></i> 我的开发环境：pkking/dotfiles 配置解析
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2015 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Chaoran</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/pkking" class="github-corner" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"lcrpkking","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js" defer></script>
+
+</body>
+</html>
