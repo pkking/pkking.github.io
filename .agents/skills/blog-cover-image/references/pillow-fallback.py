@@ -20,9 +20,13 @@ except ImportError:
     sys.exit(1)
 
 # macOS 字体路径（其他平台需调整）
-# Linux: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+# Linux: '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc' (CJK 必需，DejaVu 无中文)
 # Windows: 'C:/Windows/Fonts/msyh.ttc'
 FONT_PATHS = [
+    # Linux CJK（中文博客必需，放在最前）
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    # macOS
     '/System/Library/Fonts/STHeiti Medium.ttc',
     '/System/Library/Fonts/STHeiti Light.ttc',
     '/Library/Fonts/Arial Unicode.ttf',

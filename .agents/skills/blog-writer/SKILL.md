@@ -331,6 +331,44 @@ ls source/_posts/
 
 **例外**：用户明确说"只写中文"时跳过这个 checkpoint，直接写完。
 
+#### 4.10 结尾 What's next 导航
+
+文章结尾加「What's next」导航区（上限 2 张卡），引导读者读完本文后往哪走。
+
+⚠️ **这是递进路径，不是 Related Reading 的重复**——必须做了 Related Reading（4.6）做不到的事才有存在价值。
+
+**规则 1：每张卡必须带一行「为什么是下一篇」，且理由锚在本文结尾。**
+
+不是「相似主题」，是「读完本文，读者自然想问的下一个问题」。格式：
+
+```
+- [卡片标题](内链路径) — 一行理由（必须点名本文讲了什么 / 没讲什么）
+```
+
+例：本文讲「Claude Code 怎么用」→
+
+> - [CLAUDE.md 怎么写](/2026/06/xx/...) — 本文讲了 agentic loop，那篇讲喂给 loop 的上下文怎么调
+
+写不出这行理由 → 这张卡不该存在。理由行可证伪：读者能核对「我读完真的想看这个吗」。
+
+**规则 2：递进，不是聚簇。**
+
+Related Reading 按「主题相似」聚簇；What's next 按「读者递进」排序。三种合法递进：
+
+| 递进类型 | 本文 → 推荐 |
+|---------|-----------|
+| 深一层 | 本文讲用法 → 推原理篇 |
+| 旁一手 | 本文讲 A → 推 A vs B 对比篇 |
+| 落一地 | 本文讲判断 → 推实操清单篇 |
+
+候选卡若只是「也是讲 X 的」→ 归 Related Reading，别重复（YAGNI）。
+
+**规则 3：没合适的就别凑。**
+
+步骤 2.4 已 `ls source/_posts/` 拿了库存。从本文结尾出发，没有真递进 → **砍掉这一节**。一张诚实的卡 > 两张凑数的；零张 > 一张假的。
+
+**渲染**：用 markdown 列表 + 内链即可，不必造 HTML 组件（CardGroup 是 Mintlify 文档框架的特性，Hexo + Next 无原生对应）。内链路径跟 permalink 规则 `:year/:month/:day/:title/`（见 4.6）。
+
 ---
 
 ### 步骤 5：封面图 + 内容配图
@@ -394,13 +432,13 @@ ls source/_posts/
 
 | 配置点 | 位置 | 作用 |
 |-------|-----|------|
-| mermaid 插件 | `package.json` → `hexo-filter-mermaid-diagrams` | 渲染 ` ```mermaid ` 代码块为图表 |
+| mermaid 渲染 | Next 主题 `mermaid.js` 客户端渲染 | hexo highlight 产出 `<pre><code class="mermaid">`，Next 脚本认 `pre > .mermaid` 并调 mermaid 11 画成 SVG |
 | mermaid 主题 | `_config.next.yml` → `mermaid.theme` | `light: forest` / `dark: dark`，深色背景高对比 |
-| mermaid 语言排除 | `_config.yml` → `highlight.exclude_languages: [mermaid]` | 避免 highlight 抢渲染 mermaid 代码块 |
+| mermaid 语言排除 | `_config.yml` → `highlight.exclude_languages: [mermaid]` | hexo 对 mermaid 代码块不做语法高亮，保留原始文本（0 span），mermaid 才能解析 |
 | HTML 渲染 | Hexo marked 默认支持 | architecture skill 的内嵌 HTML 可直接渲染 |
 | 文章资源 | `_config.yml` → `post_asset_folder: true` | 图片放文章同名文件夹，正文用相对路径引用 |
 
-**避坑经验**：mermaid 代码块不要被 highlight 插件拦截——已在 `_config.yml` 的 `highlight.exclude_languages` 排除 `mermaid`；架构图也不要走 AI 生图，mermaid/architecture 的可编辑性和响应式远胜 WebP。
+**避坑经验**：⚠️ **不要安装 `hexo-filter-mermaid-diagrams`**——它产出 `<pre class="mermaid">`（class 在 pre 上），而 Next 的 `mermaid.js` 认的是 `pre > .mermaid`（code 子元素），选择器匹配 0 个 → 图不渲染。本项目已移除该插件，走 Next 原生路径：`highlight.exclude_languages: [mermaid]` 保留原始文本 + Next `mermaid.js` 客户端渲染。架构图也不要走 AI 生图，mermaid/architecture 的可编辑性和响应式远胜 WebP。
 
 **配图规范**（不变）：
 - WebP 格式（AI 生图）：质量 85，最大宽度 1200px，中英文共用
@@ -439,6 +477,7 @@ ls source/_posts/
 - [ ] 内链 ≥ 4 个（自然嵌入正文，不是堆在文末）
 - [ ] 外链 ≥ 3 个（链接一手来源）
 - [ ] 中文版已创建（英文版可选）
+- [ ] **What's next（若写）**：每张卡带一行锚在本文结尾的理由；与 Related Reading 不重复；无真递进则已砍掉
 
 #### SEO 检查
 
