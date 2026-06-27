@@ -29,42 +29,6 @@
       </tags>
   </entry>
   <entry>
-    <title>关于在amd64架构下构建arm架构deb包的问题</title>
-    <url>/2015/05/12/crossBuild/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="poky-yocto"><a href="#poky-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
-<p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
-<h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
-<p>不过转念一想，既然要基于ubuntu的源码，那么yocto中所带的源码则显然无法使用了，因为yocto虽然也能制作deb包，不过和ubuntu中的版本完全无法兼容，并且ubuntu对上游源码所打的一些补丁yocto也没有集成，因此可能需要对yocto进行一番改造。</p>
-<h3 id="放弃"><a href="#放弃" class="headerlink" title="放弃"></a>放弃</h3><p>参考了yocto的文档后，我们发现，yocto实现deb包的机制和通常的debian/ubuntu构建流程不太一样，后者使用dpkg-buildpackage来构建特定的包，而yocto则采用了自己实现的机制（<code>lib/pm.py</code>利用dpkg apt等工具实现了自己的打包流程）这导致其构建包的流程几乎不透明了，而要通过修改yocto来达到生成特定版本ubuntu兼容的deb包，则可以预见包含比较大的工作量。</p>
-<p>故此，yocto的路线暂停，而这里的主要问题是，ubuntu的rootfs是一个基于二进制包的img，我们只需要找到一种方法，能够将上游源码构建为某个版本apt能够识别、安装的包即可，有了这些包，构建rootfs就再轻松不过了</p>
-<h1 id="sbuild"><a href="#sbuild" class="headerlink" title="sbuild"></a>sbuild</h1><p>在yocto的方案受挫后，我们发现，当前主要的问题在于如何将交叉编译生成的二进制文件打包成软件包，经过一番搜索后，cross-build映入了我们眼帘。在看完<a href="https://wiki.ubuntu.com/CrossBuilding">这篇</a>、<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">这篇</a>和<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">这篇</a>后，总结出一个结论：妈蛋交叉构建还是个坑啊，大家要构建最好把源码传到<code>launchpad</code>上啊，我们建议大家构建的时候用最新的工具链哟，也欢迎搭建帮忙一起测试sbuild和那些个坑爹的package 维护者挖的坑 （逃</p>
-<p>不过第一篇文中，同时也表示业界在<code>crossbuild</code>的泥潭里正缓慢的前行，那么之前的<code>ubuntu for arm</code>版本又是如何构建出来的呢？？下面来解答！</p>
-<h3 id="crossBuild-node"><a href="#crossBuild-node" class="headerlink" title="crossBuild node"></a>crossBuild node</h3><p>这里就要请出<a href="https://launchpad.net/ubuntu">launchpad</a>了，根据<a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">这篇文章</a>，可以得知，ubuntu基本是采用launchpad的分布式构建节点来制作软件包的，并且他们还是用的最慢的本地构建方法（也就是利用<code>qemu</code>，在<code>x86_64</code>的虚拟机上模拟<code>arm</code>环境，然后用arm架构的工具构建软件包），事实上，launchpad的<a href="https://help.launchpad.net/Packaging/PPA">这篇文章</a>也是这么说的。</p>
-<p>既然如此，那我们何不自己搞一发本地构建？</p>
-<p>于是跟随着这篇<a href="https://wiki.ubuntu.com/SimpleSbuild">guide</a> 我们搭建了一个 host,build,target都是armhf的chroot环境（前面的教程搭建的是基于amd64的sbuild chroot，只需要在mk-sbuild和sbuild的时候，将–arch=armhf加入命令行即可），然后就可以轻松的在amd64下构建arm软件包了</p>
-<h1 id="buildd"><a href="#buildd" class="headerlink" title="buildd"></a>buildd</h1><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>用sbuild构建了一些包之后，发现，我们的日志和launchpad上的build.log并不一样，launchpad似乎使用了一个叫做buildd的工具来进行自动化的构建，google一番之后，发现了<a href="https://www.debian.org/devel/buildd/">这篇文章</a>，原来launchpad利用<code>wanna-build buildd sbuild</code>构建了一套自动化构建环境，buildd周期性的检查upload上来的源码包，而wanna-build则维护了一个包含各个软件包在各个架构上的构建状态的数据库，buildd通过数据库来选择是否重新构建（如果该包当前状态是未成功构建或超过包的保质期）或者忽略本次构建（包已经构建成功并且在保质期内），而最终的构建工具，则是sbuild</p>
-<h3 id="还是sbuild"><a href="#还是sbuild" class="headerlink" title="还是sbuild"></a>还是sbuild</h3><p>最终真相大白，虽然我们可能没有资源架设<code>openstack集群</code>来进行分布式构建，但是只要采用和launchpad一样策略：使用sbuild构建各个架构的软件包，也是毫无问题的。</p>
-<p>最后，送上利用sbuild从零构建arm等架构软件包的<a href="https://wiki.debian.org/sbuild">官方教程</a></p>
-<h1 id="参考文献："><a href="#参考文献：" class="headerlink" title="参考文献："></a>参考文献：</h1><ul>
-<li><a href="https://wiki.debian.org/sbuild">https://wiki.debian.org/sbuild</a></li>
-<li><a href="https://wiki.ubuntu.com/SimpleSbuild">https://wiki.ubuntu.com/SimpleSbuild</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch</a></li>
-<li><a href="https://wiki.ubuntu.com/CrossBuilding">https://wiki.ubuntu.com/CrossBuilding</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding</a></li>
-<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart</a></li>
-<li><a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379</a></li>
-<li><a href="https://help.launchpad.net/Packaging/PPA">https://help.launchpad.net/Packaging/PPA</a></li>
-<li><a href="https://www.debian.org/devel/buildd/">https://www.debian.org/devel/buildd/</a></li>
-</ul>
-]]></content>
-      <tags>
-        <tag>ubuntu</tag>
-        <tag>sbuild</tag>
-        <tag>arm</tag>
-        <tag>crossBuild</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>大教堂与集市</title>
     <url>/2024/09/20/The-Cathedral-the-Bazaa/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="第一章-教堂与市集"><a href="#第一章-教堂与市集" class="headerlink" title="第一章 教堂与市集"></a>第一章 教堂与市集</h1><p>Linux 打破了许多软件开发的传统，这个世界级的操作系统在五年前（1991 年）仅仅靠着如丝般的互联网，神奇地联合了散布在全世界数以千计兼职的玩家们来开发它，谁曾料到会发生这样的事情呢？</p>
@@ -377,6 +341,42 @@
       </tags>
   </entry>
   <entry>
+    <title>关于在amd64架构下构建arm架构deb包的问题</title>
+    <url>/2015/05/12/crossBuild/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="poky-yocto"><a href="#poky-yocto" class="headerlink" title="poky &amp; yocto"></a>poky &amp; yocto</h1><p>最近项目组在准备开发基于 <code>arm</code>的版本，于是涉及到了交叉编译和交叉构建，前者很简单，只需要安装相应的arm-gcc即可。<br>可惜生活往往不是如此简单，出于某些目的，我们需要构建基于ubuntu 中的源码和包管理机制构建的版本，也就是说，我们需要制作arm版本的ubuntu rootfs，之所以不能直接使用<code>ubuntu core for arm</code>，是因为某些时候可能需要修改某些包的源码，所以需要同时搭建一个交叉编译和构建包的环境。</p>
+<p>也就是一个 <code>src -&gt; binary -&gt; package</code>的过程</p>
+<h3 id="Yocto"><a href="#Yocto" class="headerlink" title="Yocto"></a>Yocto</h3><p>记得在实验室的时候，用<code>bitbake</code>这个工具编译过arm下的用户态程序，于是google一番发现，bitbake原来是一个叫做Yocto的工具下的一个python写的工具集，用于将源码交叉构建为目标硬件的二进制程序（甚至软件包），遂大喜，下了最新的yocto之后，根据官方的 Quick Start迅速构建了一个img</p>
+<p>不过转念一想，既然要基于ubuntu的源码，那么yocto中所带的源码则显然无法使用了，因为yocto虽然也能制作deb包，不过和ubuntu中的版本完全无法兼容，并且ubuntu对上游源码所打的一些补丁yocto也没有集成，因此可能需要对yocto进行一番改造。</p>
+<h3 id="放弃"><a href="#放弃" class="headerlink" title="放弃"></a>放弃</h3><p>参考了yocto的文档后，我们发现，yocto实现deb包的机制和通常的debian/ubuntu构建流程不太一样，后者使用dpkg-buildpackage来构建特定的包，而yocto则采用了自己实现的机制（<code>lib/pm.py</code>利用dpkg apt等工具实现了自己的打包流程）这导致其构建包的流程几乎不透明了，而要通过修改yocto来达到生成特定版本ubuntu兼容的deb包，则可以预见包含比较大的工作量。</p>
+<p>故此，yocto的路线暂停，而这里的主要问题是，ubuntu的rootfs是一个基于二进制包的img，我们只需要找到一种方法，能够将上游源码构建为某个版本apt能够识别、安装的包即可，有了这些包，构建rootfs就再轻松不过了</p>
+<h1 id="sbuild"><a href="#sbuild" class="headerlink" title="sbuild"></a>sbuild</h1><p>在yocto的方案受挫后，我们发现，当前主要的问题在于如何将交叉编译生成的二进制文件打包成软件包，经过一番搜索后，cross-build映入了我们眼帘。在看完<a href="https://wiki.ubuntu.com/CrossBuilding">这篇</a>、<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">这篇</a>和<a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">这篇</a>后，总结出一个结论：妈蛋交叉构建还是个坑啊，大家要构建最好把源码传到<code>launchpad</code>上啊，我们建议大家构建的时候用最新的工具链哟，也欢迎搭建帮忙一起测试sbuild和那些个坑爹的package 维护者挖的坑 （逃</p>
+<p>不过第一篇文中，同时也表示业界在<code>crossbuild</code>的泥潭里正缓慢的前行，那么之前的<code>ubuntu for arm</code>版本又是如何构建出来的呢？？下面来解答！</p>
+<h3 id="crossBuild-node"><a href="#crossBuild-node" class="headerlink" title="crossBuild node"></a>crossBuild node</h3><p>这里就要请出<a href="https://launchpad.net/ubuntu">launchpad</a>了，根据<a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">这篇文章</a>，可以得知，ubuntu基本是采用launchpad的分布式构建节点来制作软件包的，并且他们还是用的最慢的本地构建方法（也就是利用<code>qemu</code>，在<code>x86_64</code>的虚拟机上模拟<code>arm</code>环境，然后用arm架构的工具构建软件包），事实上，launchpad的<a href="https://help.launchpad.net/Packaging/PPA">这篇文章</a>也是这么说的。</p>
+<p>既然如此，那我们何不自己搞一发本地构建？</p>
+<p>于是跟随着这篇<a href="https://wiki.ubuntu.com/SimpleSbuild">guide</a> 我们搭建了一个 host,build,target都是armhf的chroot环境（前面的教程搭建的是基于amd64的sbuild chroot，只需要在mk-sbuild和sbuild的时候，将–arch=armhf加入命令行即可），然后就可以轻松的在amd64下构建arm软件包了</p>
+<h1 id="buildd"><a href="#buildd" class="headerlink" title="buildd"></a>buildd</h1><h3 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h3><p>用sbuild构建了一些包之后，发现，我们的日志和launchpad上的build.log并不一样，launchpad似乎使用了一个叫做buildd的工具来进行自动化的构建，google一番之后，发现了<a href="https://www.debian.org/devel/buildd/">这篇文章</a>，原来launchpad利用<code>wanna-build buildd sbuild</code>构建了一套自动化构建环境，buildd周期性的检查upload上来的源码包，而wanna-build则维护了一个包含各个软件包在各个架构上的构建状态的数据库，buildd通过数据库来选择是否重新构建（如果该包当前状态是未成功构建或超过包的保质期）或者忽略本次构建（包已经构建成功并且在保质期内），而最终的构建工具，则是sbuild</p>
+<h3 id="还是sbuild"><a href="#还是sbuild" class="headerlink" title="还是sbuild"></a>还是sbuild</h3><p>最终真相大白，虽然我们可能没有资源架设<code>openstack集群</code>来进行分布式构建，但是只要采用和launchpad一样策略：使用sbuild构建各个架构的软件包，也是毫无问题的。</p>
+<p>最后，送上利用sbuild从零构建arm等架构软件包的<a href="https://wiki.debian.org/sbuild">官方教程</a></p>
+<h1 id="参考文献："><a href="#参考文献：" class="headerlink" title="参考文献："></a>参考文献：</h1><ul>
+<li><a href="https://wiki.debian.org/sbuild">https://wiki.debian.org/sbuild</a></li>
+<li><a href="https://wiki.ubuntu.com/SimpleSbuild">https://wiki.ubuntu.com/SimpleSbuild</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/UsingMultiArch</a></li>
+<li><a href="https://wiki.ubuntu.com/CrossBuilding">https://wiki.ubuntu.com/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossBuilding</a></li>
+<li><a href="https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart">https://wiki.linaro.org/Platform/DevPlatform/CrossCompile/CrossbuildingQuickStart</a></li>
+<li><a href="http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379">http://comments.gmane.org/gmane.linux.embedded.yocto.general/15379</a></li>
+<li><a href="https://help.launchpad.net/Packaging/PPA">https://help.launchpad.net/Packaging/PPA</a></li>
+<li><a href="https://www.debian.org/devel/buildd/">https://www.debian.org/devel/buildd/</a></li>
+</ul>
+]]></content>
+      <tags>
+        <tag>ubuntu</tag>
+        <tag>sbuild</tag>
+        <tag>arm</tag>
+        <tag>crossBuild</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>cs186学习-笔记1</title>
     <url>/2020/11/21/cs186-learn-1/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="intro"><a href="#intro" class="headerlink" title="intro"></a>intro</h1><p>数据库是每个开发人员都绕不开的领域，并且数据库作为软三大系统软件之一，其中荟萃了几乎所有的计算机思想和工程技术，不论是从事任何领域，学习了解数据库的设计和实现都能有所收获。</p>
@@ -507,45 +507,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Manacher 算法求最长回文子串</title>
-    <url>/2017/07/31/manacher/</url>
-    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>本文来源于<code>leetcode</code>上的一道求最长回文子串的<a href="https://leetcode.com/problems/longest-palindromic-substring">中级算法题</a></p>
-<h1 id="先来个思路"><a href="#先来个思路" class="headerlink" title="先来个思路"></a>先来个思路</h1><p>由回文的性质想到，从回文的对称轴向两边同时扩张，在回文半径内，两边的字符一定是相同的。<br><br>因此，我们是否可以从左向右依次遍历字符串，用扩展的方法来找出所有的回文串，并记录最长的那一个呢?<br><br>说干就干，经过几次WA，终于AC了，代码如下：</p>
-<figure class="highlight go"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> {</span><br><span class="line">    i, j, max, current_len := <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span></span><br><span class="line">    <span class="keyword">var</span> longest <span class="type">string</span></span><br><span class="line">    n := <span class="built_in">len</span>(s)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i = <span class="number">0</span>; i &lt; n; i++ {</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j &lt; n; j++ { <span class="comment">// if the length of the palindrome is odd  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j] {</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            }</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max {</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j]</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j + <span class="number">1</span> &lt; n; j++ { <span class="comment">// for the even case  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j + <span class="number">1</span>] {</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            }</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">2</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max {</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j + <span class="number">1</span>]</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> longest;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-<p>简单估计了下，长度为<code>n</code>的字符串，该思路的时间复杂度应该是<code>O(n^2)</code>级别的，而且，可以看到代码中需要分别处理奇偶长度的字符串，比较麻烦。<br><br>最最最关键的是，实在想不出其他的发子了。。。哈哈</p>
-<h1 id="manacher"><a href="#manacher" class="headerlink" title="manacher"></a>manacher</h1><p>经过一番搜索后，发现该问题大多数思路是使用 <code>manacher</code>算法，这个算法可以完美的解决奇偶问题，并且时间复杂度只有<code>O(n)</code></p>
-<h2 id="解决奇偶单独处理的问题"><a href="#解决奇偶单独处理的问题" class="headerlink" title="解决奇偶单独处理的问题"></a>解决奇偶单独处理的问题</h2><p>由奇偶数的性质：奇数+偶数=奇数，因此假设我们的序列长度为奇数，我们在序列首尾和每个字符之间都添加一个字符<code>#</code>，则长度变为奇数，同理，长度为偶数时，如此处理后长度仍为奇数。<br></p>
-<p>由此，通过添加一个额外的字符，就能解决序列长度特殊处理的问题。</p>
-<h2 id="算法实际流程"><a href="#算法实际流程" class="headerlink" title="算法实际流程"></a>算法实际流程</h2><p>将问题简单化之后，接下来就要进入算法的核心流程了。<br><br>首先，manacher需要借助一个辅助数组<code>p[i]</code>，用来记录位置为<code>i</code>的字符的回文半径，因而字符串<code>#a#b#a#d</code>的<code>p[i]</code>则为：</p>
-<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">处理后的字符串 |   # a # b # a # d #</span><br><span class="line">p[i]          |   1 2 1 4 1 2 1 2 1</span><br><span class="line">原始回文长度   |     1   3   1   1</span><br></pre></td></tr></tbody></table></figure>
-<p>可以看到，对于和原始字符串中对应位置的字符所在回文的长度，正好等于处理后的字符串的<code>p[i] - 1</code><br><br>也就是说，只要求得了<code>p[i]</code>，就能获得最长的回文串</p>
-<h2 id="求p-i"><a href="#求p-i" class="headerlink" title="求p[i]"></a>求<code>p[i]</code></h2><p>求<code>p[i]</code>的情况可以分为两种：</p>
-<ol>
-<li>当前的字符处于未被遍历过的字符串</li>
-<li>当前的字符处于已经被遍历过的字符串</li>
-</ol>
-<p>对于情况<code>1</code>，由于没有历史数据可以借鉴，因此只能直接重新通过双向扩展来求回文半径<br><br>而对于情况<code>2</code>，如果我们不利用已经遍历过的回文的性质，那么算法就会和一开始的暴力遍历法一样低效，因此，这里需要仔细考虑如何利用回文性质快速求出会问半径<code>p[i]</code><br></p>
-<h3 id="利用历史数据快速求解回文半径"><a href="#利用历史数据快速求解回文半径" class="headerlink" title="利用历史数据快速求解回文半径"></a>利用历史数据快速求解回文半径</h3><p>假设之前已遍历的回文子串能延伸到达的最远位置为<code>max</code>，其所对应的对称轴为<code>id</code>，那么，对于上文的情况<code>2</code>，当前的字符<code>c</code>一定位于<code>max</code>的左边，并且可以利用回文的性质，通过<code>c</code>关于<code>id</code>的对称点<code>j</code>来求<code>p[i]</code><br><br><img src="/images/manacher-1.png" alt="situation 2"></p>
-<p>因此，我们可以看到，回文半径的求解，分为以下几个情况：</p>
-<ol>
-<li><code>j</code>的回文包含在<code>id</code>的回文内<br><br><img src="/images/manacher-3.png" alt="c bettween 0 and max"><br><br>这种情况下，<code>p[i] = p[j] = p[2*id - i]</code>且<code>p[i] &lt; max - i</code></li>
-<li><code>j</code>的回文包含在<code>id</code>的回文外<br><br><img src="/images/manacher-2.png" alt="c is partly out of max"><br><br>这种情况下，<code>j</code>的回文半径已经超出了<code>id</code>的半径，因此，我们需要推断<code>i</code>的回文半径是否也会超出<br><br>结论是：不会！<br><br>原因：假如<code>j</code>的回文包含<code>a</code>和<code>b</code>，且<code>b</code>等于<code>c</code>（<code>b</code>，<code>c</code>关于<code>id</code>对称），那么如果<code>i</code>的回文超过了<code>max</code>，则超过<code>max</code>的部分必定和<code>j</code>超出<code>id</code>左边回文半径有部分相等，这样，就会导致<code>id</code>的回文半径超出<code>max</code>，和已知条件矛盾，因此这是不可能的<br><br>此时，<code>p[i] = max - i</code></li>
-</ol>
-<p>综上所述，当<code>p[i] &lt; max - i</code>时，<code>p[i] = p[2*id - i]</code>，而<code>p[i] == max - i</code>时，<code>p[i] == max - i</code>，因此可以得到，`p[i] = min(max - i, p[2*id - i])</p>
-<h2 id="最后，上代码"><a href="#最后，上代码" class="headerlink" title="最后，上代码"></a>最后，上代码</h2><figure class="highlight go"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">min</span><span class="params">(a, b <span class="type">int</span>)</span></span> <span class="type">int</span> {</span><br><span class="line">    <span class="keyword">if</span> a &gt; b { </span><br><span class="line">        <span class="keyword">return</span> b</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    }   </span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> {</span><br><span class="line">    tmp := <span class="string">"#"</span> + strings.Join(strings.Split(s,<span class="string">""</span>),<span class="string">"#"</span>) + <span class="string">"#"</span> </span><br><span class="line">    id, l, max, maxlen, mxpos := <span class="number">0</span>, <span class="built_in">len</span>(tmp), <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">    p := <span class="built_in">make</span>([]<span class="type">int</span>, l)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i:=<span class="number">0</span>; i&lt;l; i++ {</span><br><span class="line">        <span class="keyword">if</span> max &gt; i {</span><br><span class="line">            p[i] = min(p[<span class="number">2</span>*id - i], max - i)</span><br><span class="line">        } <span class="keyword">else</span> { </span><br><span class="line">            p[i] = <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">for</span> ;i &gt;= p[i] &amp;&amp; i + p[i] &lt; l &amp;&amp; tmp[i-p[i]] == tmp[i+p[i]]; {</span><br><span class="line">            p[i] += <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> p[i] + i &gt; max { </span><br><span class="line">            max  = p[i] + i</span><br><span class="line">            id = i</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> maxlen &lt; p[i] {</span><br><span class="line">            maxlen = p[i]</span><br><span class="line">            mxpos = i</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> s[(mxpos+<span class="number">1</span>-maxlen)/<span class="number">2</span>:(mxpos<span class="number">-1</span>+maxlen)/<span class="number">2</span>]</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
-
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a href="http://www.61mon.com/index.php/archives/181/">http://www.61mon.com/index.php/archives/181/</a></li>
-</ul>
-]]></content>
-      <tags>
-        <tag>algrithm</tag>
-        <tag>manacher</tag>
-        <tag>palindromic</tag>
-        <tag>leetcode</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>利用pelican和gitcafe搭建博客</title>
     <url>/2015/02/18/how_to_build_gitcafe_pages_by_pelican/</url>
     <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><p>##介绍<br>pelican是基于python的静态web站点生成器，由python编写<br>目前最火热的静态站点利器jekyll则由ruby编写，出于对python的爱，我于是选择用pelican</p>
@@ -621,6 +582,45 @@
         <tag>pelican</tag>
         <tag>gitcafe</tag>
         <tag>博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Manacher 算法求最长回文子串</title>
+    <url>/2017/07/31/manacher/</url>
+    <content><![CDATA[<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/hint.css/2.4.1/hint.min.css"><h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>本文来源于<code>leetcode</code>上的一道求最长回文子串的<a href="https://leetcode.com/problems/longest-palindromic-substring">中级算法题</a></p>
+<h1 id="先来个思路"><a href="#先来个思路" class="headerlink" title="先来个思路"></a>先来个思路</h1><p>由回文的性质想到，从回文的对称轴向两边同时扩张，在回文半径内，两边的字符一定是相同的。<br><br>因此，我们是否可以从左向右依次遍历字符串，用扩展的方法来找出所有的回文串，并记录最长的那一个呢?<br><br>说干就干，经过几次WA，终于AC了，代码如下：</p>
+<figure class="highlight go"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> {</span><br><span class="line">    i, j, max, current_len := <span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span></span><br><span class="line">    <span class="keyword">var</span> longest <span class="type">string</span></span><br><span class="line">    n := <span class="built_in">len</span>(s)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i = <span class="number">0</span>; i &lt; n; i++ {</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j &lt; n; j++ { <span class="comment">// if the length of the palindrome is odd  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j] {</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            }</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max {</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j]</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">for</span> j = <span class="number">0</span>; i - j &gt;= <span class="number">0</span> &amp;&amp; i + j + <span class="number">1</span> &lt; n; j++ { <span class="comment">// for the even case  </span></span><br><span class="line">            <span class="keyword">if</span> s[i - j] != s[i + j + <span class="number">1</span>] {</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">            }</span><br><span class="line">            current_len = j * <span class="number">2</span> + <span class="number">2</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> current_len &gt; max {</span><br><span class="line">            max = current_len</span><br><span class="line">            longest = s[i - j + <span class="number">1</span>: i + j + <span class="number">1</span>]</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> longest;</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+<p>简单估计了下，长度为<code>n</code>的字符串，该思路的时间复杂度应该是<code>O(n^2)</code>级别的，而且，可以看到代码中需要分别处理奇偶长度的字符串，比较麻烦。<br><br>最最最关键的是，实在想不出其他的发子了。。。哈哈</p>
+<h1 id="manacher"><a href="#manacher" class="headerlink" title="manacher"></a>manacher</h1><p>经过一番搜索后，发现该问题大多数思路是使用 <code>manacher</code>算法，这个算法可以完美的解决奇偶问题，并且时间复杂度只有<code>O(n)</code></p>
+<h2 id="解决奇偶单独处理的问题"><a href="#解决奇偶单独处理的问题" class="headerlink" title="解决奇偶单独处理的问题"></a>解决奇偶单独处理的问题</h2><p>由奇偶数的性质：奇数+偶数=奇数，因此假设我们的序列长度为奇数，我们在序列首尾和每个字符之间都添加一个字符<code>#</code>，则长度变为奇数，同理，长度为偶数时，如此处理后长度仍为奇数。<br></p>
+<p>由此，通过添加一个额外的字符，就能解决序列长度特殊处理的问题。</p>
+<h2 id="算法实际流程"><a href="#算法实际流程" class="headerlink" title="算法实际流程"></a>算法实际流程</h2><p>将问题简单化之后，接下来就要进入算法的核心流程了。<br><br>首先，manacher需要借助一个辅助数组<code>p[i]</code>，用来记录位置为<code>i</code>的字符的回文半径，因而字符串<code>#a#b#a#d</code>的<code>p[i]</code>则为：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="code"><pre><span class="line">处理后的字符串 |   # a # b # a # d #</span><br><span class="line">p[i]          |   1 2 1 4 1 2 1 2 1</span><br><span class="line">原始回文长度   |     1   3   1   1</span><br></pre></td></tr></tbody></table></figure>
+<p>可以看到，对于和原始字符串中对应位置的字符所在回文的长度，正好等于处理后的字符串的<code>p[i] - 1</code><br><br>也就是说，只要求得了<code>p[i]</code>，就能获得最长的回文串</p>
+<h2 id="求p-i"><a href="#求p-i" class="headerlink" title="求p[i]"></a>求<code>p[i]</code></h2><p>求<code>p[i]</code>的情况可以分为两种：</p>
+<ol>
+<li>当前的字符处于未被遍历过的字符串</li>
+<li>当前的字符处于已经被遍历过的字符串</li>
+</ol>
+<p>对于情况<code>1</code>，由于没有历史数据可以借鉴，因此只能直接重新通过双向扩展来求回文半径<br><br>而对于情况<code>2</code>，如果我们不利用已经遍历过的回文的性质，那么算法就会和一开始的暴力遍历法一样低效，因此，这里需要仔细考虑如何利用回文性质快速求出会问半径<code>p[i]</code><br></p>
+<h3 id="利用历史数据快速求解回文半径"><a href="#利用历史数据快速求解回文半径" class="headerlink" title="利用历史数据快速求解回文半径"></a>利用历史数据快速求解回文半径</h3><p>假设之前已遍历的回文子串能延伸到达的最远位置为<code>max</code>，其所对应的对称轴为<code>id</code>，那么，对于上文的情况<code>2</code>，当前的字符<code>c</code>一定位于<code>max</code>的左边，并且可以利用回文的性质，通过<code>c</code>关于<code>id</code>的对称点<code>j</code>来求<code>p[i]</code><br><br><img src="/images/manacher-1.png" alt="situation 2"></p>
+<p>因此，我们可以看到，回文半径的求解，分为以下几个情况：</p>
+<ol>
+<li><code>j</code>的回文包含在<code>id</code>的回文内<br><br><img src="/images/manacher-3.png" alt="c bettween 0 and max"><br><br>这种情况下，<code>p[i] = p[j] = p[2*id - i]</code>且<code>p[i] &lt; max - i</code></li>
+<li><code>j</code>的回文包含在<code>id</code>的回文外<br><br><img src="/images/manacher-2.png" alt="c is partly out of max"><br><br>这种情况下，<code>j</code>的回文半径已经超出了<code>id</code>的半径，因此，我们需要推断<code>i</code>的回文半径是否也会超出<br><br>结论是：不会！<br><br>原因：假如<code>j</code>的回文包含<code>a</code>和<code>b</code>，且<code>b</code>等于<code>c</code>（<code>b</code>，<code>c</code>关于<code>id</code>对称），那么如果<code>i</code>的回文超过了<code>max</code>，则超过<code>max</code>的部分必定和<code>j</code>超出<code>id</code>左边回文半径有部分相等，这样，就会导致<code>id</code>的回文半径超出<code>max</code>，和已知条件矛盾，因此这是不可能的<br><br>此时，<code>p[i] = max - i</code></li>
+</ol>
+<p>综上所述，当<code>p[i] &lt; max - i</code>时，<code>p[i] = p[2*id - i]</code>，而<code>p[i] == max - i</code>时，<code>p[i] == max - i</code>，因此可以得到，`p[i] = min(max - i, p[2*id - i])</p>
+<h2 id="最后，上代码"><a href="#最后，上代码" class="headerlink" title="最后，上代码"></a>最后，上代码</h2><figure class="highlight go"><table><tbody><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">min</span><span class="params">(a, b <span class="type">int</span>)</span></span> <span class="type">int</span> {</span><br><span class="line">    <span class="keyword">if</span> a &gt; b { </span><br><span class="line">        <span class="keyword">return</span> b</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    }   </span><br><span class="line">}</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">longestPalindrome</span><span class="params">(s <span class="type">string</span>)</span></span> <span class="type">string</span> {</span><br><span class="line">    tmp := <span class="string">"#"</span> + strings.Join(strings.Split(s,<span class="string">""</span>),<span class="string">"#"</span>) + <span class="string">"#"</span> </span><br><span class="line">    id, l, max, maxlen, mxpos := <span class="number">0</span>, <span class="built_in">len</span>(tmp), <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span></span><br><span class="line">    p := <span class="built_in">make</span>([]<span class="type">int</span>, l)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i:=<span class="number">0</span>; i&lt;l; i++ {</span><br><span class="line">        <span class="keyword">if</span> max &gt; i {</span><br><span class="line">            p[i] = min(p[<span class="number">2</span>*id - i], max - i)</span><br><span class="line">        } <span class="keyword">else</span> { </span><br><span class="line">            p[i] = <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">for</span> ;i &gt;= p[i] &amp;&amp; i + p[i] &lt; l &amp;&amp; tmp[i-p[i]] == tmp[i+p[i]]; {</span><br><span class="line">            p[i] += <span class="number">1</span></span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> p[i] + i &gt; max { </span><br><span class="line">            max  = p[i] + i</span><br><span class="line">            id = i</span><br><span class="line">        }</span><br><span class="line">        <span class="keyword">if</span> maxlen &lt; p[i] {</span><br><span class="line">            maxlen = p[i]</span><br><span class="line">            mxpos = i</span><br><span class="line">        }</span><br><span class="line">    }</span><br><span class="line">    <span class="keyword">return</span> s[(mxpos+<span class="number">1</span>-maxlen)/<span class="number">2</span>:(mxpos<span class="number">-1</span>+maxlen)/<span class="number">2</span>]</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="http://www.61mon.com/index.php/archives/181/">http://www.61mon.com/index.php/archives/181/</a></li>
+</ul>
+]]></content>
+      <tags>
+        <tag>algrithm</tag>
+        <tag>manacher</tag>
+        <tag>palindromic</tag>
+        <tag>leetcode</tag>
       </tags>
   </entry>
   <entry>
