@@ -1,0 +1,33 @@
+// Self-hosted Monaspace Argon (latin). jsdelivr/googleapis unreliable in China.
+// Only 4 weights shipped (400/700 × normal/italic) to keep payload ~200K.
+// ponytail: family is applied by NexT via font.global/codes .family (enable stays false
+// so no googleapis <link> is emitted); these @font-face rules just resolve the name.
+
+@font-face {
+  font-family: 'Monaspace Argon';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/monaspace-argon-latin-400-normal.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Argon';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/monaspace-argon-latin-400-italic.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Argon';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/monaspace-argon-latin-700-normal.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Monaspace Argon';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/monaspace-argon-latin-700-italic.woff2) format('woff2');
+}

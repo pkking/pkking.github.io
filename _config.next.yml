@@ -31,7 +31,7 @@ custom_file_path:
   #bodyEnd: source/_data/body-end.swig
   #variable: source/_data/variables.styl
   #mixin: source/_data/mixins.styl
-  #style: source/_data/styles.styl
+  style: source/_data/styles.styl
 
 
 # ---------------------------------------------------------------
@@ -422,7 +422,7 @@ font:
   # Global font settings used for all elements inside <body>.
   global:
     external: true
-    family: Bree Serif
+    family: Monaspace Argon
     size:
 
   # Font settings for site title (.site-title).
@@ -445,7 +445,7 @@ font:
   # Font settings for <code> and code blocks.
   codes:
     external: true
-    family: Roboto Mono
+    family: Monaspace Argon
 
 
 # ---------------------------------------------------------------
