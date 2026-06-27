@@ -1,0 +1,13 @@
+// Font stacks. Fonts loaded via fonts.loli.net CDN (head.swig <link>), not self-hosted.
+// ponytail: get_font_family() returned null in this inject context (stray leading comma),
+// so family names are hardcoded constants. 'Source Code Pro' = latin/code (was Monaspace);
+// 'Noto Sans SC' = CJK ahead of system fallbacks.
+
+$font-family-chinese   = 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei';
+$font-family-base      = 'Source Code Pro', $font-family-chinese, sans-serif;
+$font-family-logo      = 'Source Code Pro', $font-family-chinese, sans-serif;
+$font-family-headings  = 'Source Code Pro', $font-family-chinese, sans-serif;
+$font-family-posts     = 'Source Code Pro', $font-family-chinese, sans-serif;
+$font-family-monospace = 'Source Code Pro', consolas, Menlo, monospace, $font-family-chinese;
+// base.styl:149 captured $font-family-monospace before our redef, so re-derive it too:
+$code-font-family      = $font-family-monospace;
