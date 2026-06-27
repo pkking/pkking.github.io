@@ -1,0 +1,14 @@
+// Inject self-hosted Noto Sans SC (subset) as the CJK face ahead of system fallbacks.
+// Loaded AFTER _variables/base.styl (main.styl line 14), so these redefine the derived
+// stacks that base.styl captured with the old $font-family-chinese value.
+// ponytail: family names hardcoded (known constants) — get_font_family() returned null in
+// this inject context (stray leading comma + lost Noto in monospace), so avoid the helper.
+
+$font-family-chinese   = 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei';
+$font-family-base      = 'Monaspace Argon', $font-family-chinese, sans-serif;
+$font-family-logo      = 'Monaspace Argon', $font-family-chinese, sans-serif;
+$font-family-headings  = 'Monaspace Argon', $font-family-chinese, sans-serif;
+$font-family-posts     = 'Monaspace Argon', $font-family-chinese, sans-serif;
+$font-family-monospace = 'Monaspace Argon', consolas, Menlo, monospace, $font-family-chinese;
+// base.styl:149 captured $font-family-monospace before our redef, so re-derive it too:
+$code-font-family        = $font-family-monospace;

@@ -31,3 +31,21 @@
   font-display: swap;
   src: url(/fonts/monaspace-argon-latin-700-italic.woff2) format('woff2');
 }
+
+// Self-hosted Noto Sans SC (subsetted to the 1418 CJK chars used across posts + theme UI).
+// ponytail: subset beats Fontsource's ~100 unicode-range chunks — one file per weight,
+// ~356K, covers the whole site's CJK. Full Noto Sans CJK SC is multi-MB, not viable.
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/noto-sans-sc-400.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/noto-sans-sc-700.woff2) format('woff2');
+}
