@@ -5,3 +5,6 @@ db.json
 node_modules/
 public/
 .deploy*/
+
+# skill 运行产物
+.agents/skills/auto-optimize-results.tsv
