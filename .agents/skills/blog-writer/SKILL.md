@@ -432,13 +432,13 @@ Related Reading 按「主题相似」聚簇；What's next 按「读者递进」�
 
 | 配置点 | 位置 | 作用 |
 |-------|-----|------|
-| mermaid 插件 | `package.json` → `hexo-filter-mermaid-diagrams` | 渲染 ` ```mermaid ` 代码块为图表 |
+| mermaid 渲染 | Next 主题 `mermaid.js` 客户端渲染 | hexo highlight 产出 `<pre><code class="mermaid">`，Next 脚本认 `pre > .mermaid` 并调 mermaid 11 画成 SVG |
 | mermaid 主题 | `_config.next.yml` → `mermaid.theme` | `light: forest` / `dark: dark`，深色背景高对比 |
-| mermaid 语言排除 | `_config.yml` → `highlight.exclude_languages: [mermaid]` | 避免 highlight 抢渲染 mermaid 代码块 |
+| mermaid 语言排除 | `_config.yml` → `highlight.exclude_languages: [mermaid]` | hexo 对 mermaid 代码块不做语法高亮，保留原始文本（0 span），mermaid 才能解析 |
 | HTML 渲染 | Hexo marked 默认支持 | architecture skill 的内嵌 HTML 可直接渲染 |
 | 文章资源 | `_config.yml` → `post_asset_folder: true` | 图片放文章同名文件夹，正文用相对路径引用 |
 
-**避坑经验**：mermaid 代码块不要被 highlight 插件拦截——已在 `_config.yml` 的 `highlight.exclude_languages` 排除 `mermaid`；架构图也不要走 AI 生图，mermaid/architecture 的可编辑性和响应式远胜 WebP。
+**避坑经验**：⚠️ **不要安装 `hexo-filter-mermaid-diagrams`**——它产出 `<pre class="mermaid">`（class 在 pre 上），而 Next 的 `mermaid.js` 认的是 `pre > .mermaid`（code 子元素），选择器匹配 0 个 → 图不渲染。本项目已移除该插件，走 Next 原生路径：`highlight.exclude_languages: [mermaid]` 保留原始文本 + Next `mermaid.js` 客户端渲染。架构图也不要走 AI 生图，mermaid/architecture 的可编辑性和响应式远胜 WebP。
 
 **配图规范**（不变）：
 - WebP 格式（AI 生图）：质量 85，最大宽度 1200px，中英文共用
