@@ -12,15 +12,26 @@ reader_problem: "读者为什么会打开这篇文章，以及他读前最大的
 core_claim: "文章最核心的判断，用一句话写清楚"
 positioning: "这篇文章和同主题资料相比，差异化在哪里"
 
+story_arc:
+  reader_situation: "读者打开文章前正在处理的具体场景"
+  reader_misjudgment: "读者原本可能做出的错误判断，以及会造成什么成本"
+  conflict: "文章开头要呈现的冲突或反直觉点"
+  journey: "文章如何带读者从困惑走到判断"
+  action_after_reading: "读者读完后应该做的选择、清单、路线或下一步"
+
 tone:
   avoid:
     - "教育者口吻"
     - "讲义式定义堆叠"
     - "空泛趋势判断"
+    - "训导式句子，例如“你必须理解”“显然”“我来告诉你”"
+    - "AI 化开场，例如“近年来”“随着技术发展”“本文将深入探讨”"
   prefer:
     - "同行推演"
     - "先回答读者问题，再解释原理"
     - "结论短，理由具体"
+    - "总分总结构：开头给判断，中段拆证据，结尾回收并给行动建议"
+    - "用户场景驱动：场景 → 冲突 → 判断 → 行动"
 
 concepts:
   - name: "Concept name"
@@ -34,10 +45,61 @@ sources:
     role: "这个来源在文章中支撑什么判断"
     reliability: "primary | secondary"
 
+citation_policy:
+  min_external_links: 6
+  prefer_sources:
+    - "official_doc"
+    - "repo"
+    - "release_notes"
+    - "paper"
+    - "benchmark"
+    - "issue_or_discussion"
+  must_cite:
+    - "首次出现的外部专有名词、产品、协议、论文或标准"
+    - "最新状态、版本、价格、性能、安全、默认行为、API 行为"
+    - "争议观点、用户案例和可量化结论"
+
 structure:
-  - heading: "H2 heading"
-    reader_question: "这一节先回答读者脑子里的哪个问题"
-    purpose: "这一节服务于核心判断的方式"
+  narrative_shape: "总分总：总判断 → 分论证 → 总回收"
+  opening_total: "开头 150-250 字要给出的核心判断"
+  sections:
+    - heading: "H2 heading"
+      reader_question: "这一节先回答读者脑子里的哪个问题"
+      purpose: "这一节服务于核心判断的方式"
+      evidence_or_visual: "这一节使用的来源、图表、代码、表格或案例"
+  closing_total: "结尾如何回扣开头判断，并给读者一个行动建议或决策框架"
+
+visual_plan:
+  min_content_visuals: 3
+  cover:
+    required: true
+    role: "建立文章主题第一印象"
+  visuals:
+    - type: "mermaid | architecture | blog-diagram | blog-illustrator | table | code"
+      placement: "开头 1/3 | 中段 | 结尾前"
+      purpose: "这张图降低哪一段的理解成本"
+      asset: "cover.webp | diagram-name.webp | inline"
+
+review_passes:
+  style_pass:
+    required: true
+    checks:
+      - "去 AI 味和说教感"
+      - "确认开头有具体用户场景和冲突"
+      - "确认每个 H2 先回答读者问题"
+      - "确认结尾回扣开头判断并给行动建议"
+  evidence_pass:
+    required: true
+    checks:
+      - "首次出现的外部术语有引用角标"
+      - "关键事实、版本、价格、性能、安全和 API 行为有来源"
+      - "每个 H2 有引用、案例、数据、代码或图表支撑"
+  visual_pass:
+    required: true
+    checks:
+      - "封面图 + 至少 3 张内容图"
+      - "开头、中段、结尾前都有视觉停顿"
+      - "长文字段落不超过 700-1000 字无图表/表格/代码"
 
 regeneration_policy:
   preserve_core_claim: true
