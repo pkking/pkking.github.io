@@ -192,6 +192,7 @@ ls source/_posts/
 
 关键规则：
 - Hexo + Next 用 **YAML front matter**（`---` 分隔），不是 TOML
+- 文章只要发生实质性刷新或重写，就必须同步更新 `date` 到当前发布日期/更新时间，避免读者和搜索引擎误判内容新鲜度
 - 站点为 `zh-CN`，默认只写中文版；英文版为可选（需额外配置 Hexo 多语言，另行发布）
 - 每篇 3-5 个 FAQ 写成正文 `## 常见问题（FAQ）` 章节（Next 无 hermit-V2 的 `[[params.faqItems]]` 结构化字段）
 - 封面图正文第一行引用：`![ALT](cover.webp)`（资源放文章同名文件夹）

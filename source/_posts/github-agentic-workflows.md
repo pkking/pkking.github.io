@@ -1,6 +1,6 @@
 ---
 title: GitHub Agentic Workflows 深度解析：不只是"用自然语言写 Actions"
-date: 2026-06-27 23:00:00
+date: 2026-06-28 01:01:15
 tags:
   - GitHub Actions
   - Agentic Workflows
