@@ -235,7 +235,3 @@ gh-aw 不是终点，compile 这一步本身就是过渡态——官方的愿景
 - [GitHub Next 项目页（githubnext.com）](https://githubnext.com/projects/agentic-workflows/) — 研究 demonstrator 阶段的设计哲学与"为何不是产品"
 - [How They Work 文档](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx) — 工作流结构与安全设计
 - [Peli's Agent Factory](https://github.github.com/gh-aw/blog/2026-01-12-welcome-to-pelis-agent-factory/) — 工作流模式导览
-
-## What's next
-
-- [《大教堂与集市》](/2024/09/20/The-Cathedral-the-Bazaa/) — 本文讲了“自动化维护杂活”，那篇讲开源靠人凝聚的本来面貌。自动化之前，先读懂被自动化的东西。
