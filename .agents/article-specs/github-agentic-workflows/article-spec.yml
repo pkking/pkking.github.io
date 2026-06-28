@@ -1,0 +1,128 @@
+schema_version: 1
+slug: github-agentic-workflows
+title: "GitHub Agentic Workflows 深度解析：不只是\"用自然语言写 Actions\""
+created_at: "2026-06-27"
+updated_at: "2026-06-28"
+
+original_prompt: >
+  写一篇介绍 GitHub Agentic Workflows / gh-aw 的技术博客。文章需要让不了解
+  agentic workflow 的读者快速理解它的形态、用途、在 GitHub 技术栈里的位置，
+  以及它区别于直接在 Actions 里运行 coding agent 的独特价值。
+
+audience: "知道 GitHub 和基础 CI/CD，但不了解 agentic workflow、GitHub CLI 扩展和 gh-aw 权限模型的技术读者"
+reader_problem: "读者听说 gh-aw 只是自然语言写 GitHub Actions，但不确定它到底解决什么问题、是否值得尝试、和传统 CI/CD 或 Claude/Codex Action 有什么本质区别"
+core_claim: "gh-aw 的核心价值不是自然语言替代 YAML，而是用编译产物和 safe-outputs 把 agentic workflow 变成可审计、可回滚、可治理的 GitHub Actions 自动化"
+positioning: "不是发布新闻复述，也不是安装教程；重点是解释 gh-aw 在 GitHub Actions 技术栈中的治理价值、安全边界和适用场景"
+
+tone:
+  avoid:
+    - "教育者口吻"
+    - "讲义式定义堆叠"
+    - "把读者当成已经熟悉 GitHub CLI 和 agentic workflow"
+    - "只罗列功能，不解释工程含义"
+  prefer:
+    - "同行推演"
+    - "先回答读者为什么要关心，再解释机制"
+    - "短结论加具体理由"
+    - "概念解释后立刻说明这意味着什么"
+
+concepts:
+  - name: "GitHub Agentic Workflows / gh-aw"
+    first_mention_policy: "首次出现时说明它是 GitHub CLI 扩展，并链接到官方仓库"
+    explanation: "用 Markdown 写 agentic workflow，再编译成 GitHub Actions workflow 的工具"
+    url: "https://github.com/github/gh-aw"
+  - name: "GitHub CLI"
+    first_mention_policy: "首次出现时解释 gh 是 GitHub 官方命令行入口"
+    explanation: "gh-aw 挂在 GitHub CLI 生态里，不是独立 SaaS 平台"
+    url: "https://cli.github.com/"
+  - name: "GitHub Actions"
+    first_mention_policy: "首次出现时解释它是 GitHub 的自动化执行系统"
+    explanation: "gh-aw 的编译产物最终仍然运行在 GitHub Actions 上"
+    url: "https://docs.github.com/actions"
+  - name: "safe-outputs"
+    first_mention_policy: "首次出现时解释它是受控写操作白名单"
+    explanation: "agent 默认只读，写 issue、评论或 PR 必须通过 safe-outputs"
+    url: "https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx"
+  - name: "MCP"
+    first_mention_policy: "首次出现时解释它是 agent 调用外部工具的协议层"
+    explanation: "gh-aw 可以通过 MCP 连接工具，但需要治理工具副作用"
+    url: "https://modelcontextprotocol.io/"
+  - name: "self-hosted runner"
+    first_mention_policy: "首次出现时解释它是用户自己托管的 Actions 执行器"
+    explanation: "gh-aw 复用 Actions 生态，因此能沿用 runner、secrets、审计和分支保护"
+    url: "https://docs.github.com/actions/hosting-your-own-runners/about-self-hosted-runners"
+
+sources:
+  - url: "https://github.com/github/gh-aw"
+    type: "repo"
+    role: "确认 gh-aw 的技术预览仓库、安装方式、工作流形态和 CLI 命令"
+    reliability: "primary"
+  - url: "https://github.blog/ai-and-ml/automate-repository-tasks-with-github-agentic-workflows/"
+    type: "announcement"
+    role: "确认 2026-02-13 技术预览发布背景、合作方和产品定位"
+    reliability: "primary"
+  - url: "https://githubnext.com/projects/agentic-workflows/"
+    type: "official_doc"
+    role: "解释 GitHub Next research demonstrator 阶段，以及它不是产品也不是技术预览的早期定位"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx"
+    type: "official_doc"
+    role: "支撑编译模型、safe-outputs、安全边界和工作流结构的解释"
+    reliability: "primary"
+  - url: "https://github.github.com/gh-aw/blog/2026-01-12-welcome-to-pelis-agent-factory/"
+    type: "official_doc"
+    role: "补充 ChatOps、DailyOps、IssueOps、MultiRepoOps 等工作流模式"
+    reliability: "primary"
+
+structure:
+  - heading: "先看懂几个核心概念"
+    reader_question: "如果我不熟 GitHub CLI 和 agentic workflow，先要知道哪些词？"
+    purpose: "降低术语门槛，避免读者在开头被概念密度劝退"
+  - heading: "GitHub Agentic Workflows 是什么：从研究 demonstrator 到技术预览"
+    reader_question: "gh-aw 是什么阶段的东西，能不能现在就当成熟产品用？"
+    purpose: "建立时间线和成熟度判断"
+  - heading: "最小工作流长什么样"
+    reader_question: "它实际写出来是什么形态？"
+    purpose: "用最小例子把 Markdown intent、frontmatter 和安全边界具体化"
+  - heading: "gh-aw 的核心机制：它是一个“编译器”"
+    reader_question: "为什么说它不是自然语言写 YAML？"
+    purpose: "解释 .md 到 .lock.yml 的编译模型和 Actions 复用价值"
+  - heading: "安全是它真正的差异化"
+    reader_question: "它和自己在 Actions 里跑 Claude/Codex CLI 有什么根本区别？"
+    purpose: "把安全边界、默认只读、safe-outputs 和人审规则讲清楚"
+  - heading: "引擎中立：一份工作流，换四个模型"
+    reader_question: "它是否会把工作流锁死在某个模型上？"
+    purpose: "说明意图和模型引擎解耦的工程价值"
+  - heading: "什么时候该用，什么时候别碰"
+    reader_question: "我应该把哪些仓库任务交给 gh-aw？"
+    purpose: "给出决策框架，划清它和传统 CI/CD、交互式 agent 的边界"
+  - heading: "成本和真实落地"
+    reader_question: "试用和落地需要付出什么代价？"
+    purpose: "说明 premium request、计费风险、真实案例和落地节奏"
+  - heading: "今天就能跑的 starter"
+    reader_question: "如果我想试，最小路径是什么？"
+    purpose: "给出可执行命令和低风险启动建议"
+
+regeneration_policy:
+  preserve_core_claim: true
+  preserve_slug: true
+  refresh_date_on_material_change: true
+  allow_rewrite: true
+  require_source_refresh: true
+  require_tone_pass: true
+  keep_article_newcomer_friendly: true
+  do_not_restore_whats_next: true
+
+revision_log:
+  - date: "2026-06-27"
+    change: "创建文章初稿"
+    reason: "解释 GitHub Agentic Workflows 的机制、安全边界和适用场景"
+  - date: "2026-06-28"
+    change: "增加概念速览和术语引用角标"
+    reason: "降低不了解 agentic workflow 和 GitHub CLI 的读者门槛"
+  - date: "2026-06-28"
+    change: "刷新 front matter date"
+    reason: "文章发生实质性刷新，需要同步内容时间戳"
+  - date: "2026-06-28"
+    change: "创建 article-spec.yml"
+    reason: "让文章后续可以基于结构化上下文重生成，而不是依赖聊天记录"

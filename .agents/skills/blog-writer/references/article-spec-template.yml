@@ -1,0 +1,53 @@
+schema_version: 1
+slug: example-slug
+title: "Article title"
+created_at: "YYYY-MM-DD"
+updated_at: "YYYY-MM-DD"
+
+original_prompt: >
+  保存用户最初的写作请求。不要只写主题，要保留目标、限制、参考素材和明确偏好。
+
+audience: "具体目标读者，例如：知道 GitHub Actions，但不了解 agentic workflow 的工程师"
+reader_problem: "读者为什么会打开这篇文章，以及他读前最大的困惑是什么"
+core_claim: "文章最核心的判断，用一句话写清楚"
+positioning: "这篇文章和同主题资料相比，差异化在哪里"
+
+tone:
+  avoid:
+    - "教育者口吻"
+    - "讲义式定义堆叠"
+    - "空泛趋势判断"
+  prefer:
+    - "同行推演"
+    - "先回答读者问题，再解释原理"
+    - "结论短，理由具体"
+
+concepts:
+  - name: "Concept name"
+    first_mention_policy: "首次出现时加引用角标，并用 1-3 句解释其技术栈位置和价值"
+    explanation: "这篇文章中使用该概念时的解释口径"
+    url: "https://example.com"
+
+sources:
+  - url: "https://example.com"
+    type: "official_doc | repo | announcement | discussion | benchmark | internal"
+    role: "这个来源在文章中支撑什么判断"
+    reliability: "primary | secondary"
+
+structure:
+  - heading: "H2 heading"
+    reader_question: "这一节先回答读者脑子里的哪个问题"
+    purpose: "这一节服务于核心判断的方式"
+
+regeneration_policy:
+  preserve_core_claim: true
+  preserve_slug: true
+  refresh_date_on_material_change: true
+  allow_rewrite: true
+  require_source_refresh: true
+  require_tone_pass: true
+
+revision_log:
+  - date: "YYYY-MM-DD"
+    change: "创建文章规格"
+    reason: "让文章可复现生成"
