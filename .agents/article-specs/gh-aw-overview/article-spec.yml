@@ -1,0 +1,214 @@
+schema_version: 1
+slug: gh-aw-overview
+title: "GitHub Agentic Workflows 架构解读：从 workflow.md 到安全可控的 Agent 自动化"
+created_at: "2026-06-28"
+updated_at: "2026-06-28"
+
+original_prompt: >
+  基于 GitHub Agentic Workflows 的 6 个公开仓库（gh-aw、gh-aw-actions、gh-aw-firewall、gh-aw-mcpg、gh-aw-threat-detection、gh-aw-harness）与架构解读图片，写一篇 4000-6000 字中文技术博客。
+  目标读者：具备 CI/CD、GitHub Actions、AI Agent、MCP、开源社区基础设施经验的技术读者。
+  核心观点：GitHub Agentic Workflows 不是简单"让 AI 在 GitHub Actions 里跑起来"，而是提供了一套从 Markdown workflow 定义、编译、沙箱运行、MCP 工具访问、网络隔离、威胁检测到 Safe Outputs 受控外化的完整 Agent 自动化工程体系。
+  要求覆盖 10 个章节：背景、用户视角、一句话架构、组件逐一解读、编译运行全链路、TOP 3 核心能力、典型使用场景、适合/不适合人群、优缺点、最终判断。
+  只分析已核实的 6 个仓库，不引入不存在的组件。
+
+audience: "具备 CI/CD、GitHub Actions、AI Agent、MCP、开源社区基础设施经验的技术工程师和架构师，正在评估是否把 AI Agent 引入仓库自动化"
+reader_problem: "读者已经知道 GitHub Actions 和 AI Agent，但不确定 gh-aw 这套体系是否值得引入，各组件之间的协作关系和安全边界不清晰"
+core_claim: "GitHub Agentic Workflows 的核心价值不是'让 AI 在 Actions 里跑起来'，而是提供了一套从 Markdown 编译到受控外化的完整 Agent 自动化工程体系，把高风险 Agent 写操作拆成可审查、分阶段、最小权限的执行链路"
+positioning: "与已有的 github-agentic-workflows.md 仓库群解析文章互补：旧文侧重 4 个核心仓库的定位和分工判断；本文从用户输入→编译→执行→外化的全链路视角展开，覆盖 6 个仓库的详细解读、TOP 3 能力、使用场景矩阵和明确的适用人群判断"
+
+story_arc:
+  reader_situation: "团队已经用 GitHub Actions 做 CI/CD，想把 issue triage、PR review、文档维护等重复工作交给 Agent，但担心权限失控、prompt injection、数据外泄"
+  reader_misjudgment: "以为'让 Agent 在 Actions 里跑个 CLI'就够了，或者以为这套体系只是'用 Markdown 替代 YAML'的糖衣"
+  conflict: "Agent 能做的事越来越多，但 Agent 不是确定性程序，直接给高权限跑在 CI 里是危险的"
+  journey: "从用户输入输出讲起 → 一句话架构总览 → 逐一拆解 6 个组件 → 串联编译运行全链路 → TOP 3 核心能力 → 使用场景 → 适用人群判断 → 优缺点 → 最终结论"
+  action_after_reading: "读者能画出 gh-aw 全链路图，理解每个组件的位置和价值，并根据自己的团队规模和安全需求判断是否值得试点"
+
+tone:
+  avoid:
+    - "教育者口吻，例如'你必须理解'、'显然'、'我来告诉你'"
+    - "AI 化开场，例如'近年来'、'随着技术发展'、'本文将深入探讨'"
+    - "中性模糊总结，例如'总的来说有优点也有缺点'"
+    - "空话，例如'未来可期'、'值得关注'（除非有具体行动指向）"
+    - "功能罗列不做判断"
+    - "把文章写成 PPT 提纲或术语表"
+  prefer:
+    - "同行推演语气：和读者一起拆解架构"
+    - "先回答读者问题，再解释机制"
+    - "总分总结构：开头给总判断，中段拆证据和机制，结尾回收并给行动建议"
+    - "用户场景驱动：场景 → 冲突 → 判断 → 行动"
+    - "用具体仓库 README、action.yml、架构图中的术语做证据支撑"
+
+concepts:
+  - name: "GitHub Agentic Workflows (gh-aw)"
+    first_mention_policy: "首次出现时加引用角标，解释为 GitHub CLI 扩展，把 Markdown 工作流编译为 GitHub Actions lock 文件"
+    explanation: "本文分析的是一套压在 GitHub Actions 之上的 Agent 自动化工程体系"
+    url: "https://github.com/github/gh-aw"
+  - name: ".lock.yml"
+    first_mention_policy: "首次出现时解释为 gh-aw 编译产物，是 GitHub Actions 真正执行的确定性工作流"
+    explanation: "源码是 workflow.md，编译产物是 .lock.yml，类似 .go → binary 的关系"
+    url: "https://github.com/github/gh-aw/blob/main/docs/src/content/docs/reference/compilation-process.md"
+  - name: "MCP (Model Context Protocol)"
+    first_mention_policy: "首次出现时加引用角标，解释为 agent 连接外部工具的协议层"
+    explanation: "MCP 本身不负责治理，gh-aw-mcpg 才是把多个 MCP server 收进统一网关并加 guard policy 的那一层"
+    url: "https://modelcontextprotocol.io/"
+  - name: "Safe Outputs"
+    first_mention_policy: "首次出现时解释为受控写操作通道，Agent 不直接写 GitHub"
+    explanation: "Agent 生成结构化意图 → threat detection 审查 → safe outputs job 以最小权限写入 GitHub"
+    url: "https://github.com/github/gh-aw/blob/main/docs/src/content/docs/reference/safe-outputs.md"
+  - name: "Agent Workflow Firewall (AWF)"
+    first_mention_policy: "首次出现时解释为网络隔离层，使用 Docker sandbox + Squid proxy 控制出站"
+    explanation: "不是语义层的'安全建议'，而是具体的网络出口控制"
+    url: "https://github.com/github/gh-aw-firewall"
+
+sources:
+  - url: "https://github.com/github/gh-aw"
+    type: "repo"
+    role: "主仓库 README、Quick Start、Guardrails 说明，支撑 gh-aw 定位、编译流程、安全架构判断"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw-actions"
+    type: "repo"
+    role: "共享 Actions 库 README 和 setup/action.yml 结构，支撑运行时动作库的定位"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw-firewall"
+    type: "repo"
+    role: "AWF README、Docker sandbox + Squid proxy + API proxy sidecar 机制，支撑网络隔离层分析"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw-mcpg"
+    type: "repo"
+    role: "MCP Gateway README、guard policies (allow-only / write-sink)、integrity filtering，支撑工具治理层分析"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw-threat-detection"
+    type: "repo"
+    role: "threat-detection README、CLI 用法、检测能力（prompt injection / secret leak / malicious patch）、exit codes，支撑后置审查层分析"
+    reliability: "primary"
+  - url: "https://github.com/github/gh-aw-harness"
+    type: "repo"
+    role: "harness README，说明其当前为 smoke test / 行为验证起点，支撑测试验证层定位"
+    reliability: "primary"
+  - url: "https://github.blog/changelog/2026-02-13-github-agentic-workflows-are-now-in-technical-preview/"
+    type: "announcement"
+    role: "技术预览发布时间"
+    reliability: "primary"
+  - url: "https://github.blog/changelog/2026-06-11-github-agentic-workflows-is-now-in-public-preview/"
+    type: "announcement"
+    role: "Public Preview 发布时间，支撑'已可试点但不该神化'的判断"
+    reliability: "primary"
+  - url: "https://github.github.com/gh-aw/"
+    type: "official_doc"
+    role: "官方文档首页，标注 Public Preview 状态"
+    reliability: "primary"
+
+citation_policy:
+  min_external_links: 6
+  prefer_sources:
+    - "repo"
+    - "official_doc"
+    - "announcement"
+  must_cite:
+    - "首次出现的 gh-aw、gh-aw-actions、gh-aw-firewall、gh-aw-mcpg、gh-aw-threat-detection、gh-aw-harness 仓库"
+    - "MCP 协议、GitHub Actions、GitHub CLI"
+    - "Technical Preview / Public Preview 时间节点"
+    - "Safe Outputs、AWF、threat detection 的具体能力描述"
+    - "每个组件的 README 关键信息（Docker sandbox、Squid proxy、guard policies、exit codes 等）"
+
+structure:
+  narrative_shape: "总分总：开头直接给核心判断 → 中段从用户视角 → 架构总览 → 6 个组件逐一解读 → 全链路串联 → TOP 3 能力 → 场景/人群/优缺点 → 结尾回收判断并给行动建议"
+  opening_total: "开头 3-5 段给出核心判断：gh-aw 不是'让 AI 跑在 Actions 里'的糖衣，而是一套完整的 Agent 自动化工程体系，把用户输入从复杂 YAML 提升为 Markdown，把高风险写操作拆成可审查、分阶段、最小权限的链路"
+  sections:
+    - heading: "背景：为什么需要 GitHub Agentic Workflows"
+      reader_question: "GitHub Actions 不是已经能做自动化了吗，为什么还需要一套新的东西？"
+      purpose: "建立冲突：确定性 CI/CD vs 需要推理的 Agent 任务，引出安全可控的核心矛盾"
+      evidence_or_visual: "引用 gh-aw README 的 guardrails 说明，引用 Public Preview 时间节点"
+    - heading: "用户视角：输入是什么，输出是什么"
+      reader_question: "我用 gh-aw 到底要提供什么？最终拿到什么？"
+      purpose: "降低理解门槛，让读者先建立输入输出模型"
+      evidence_or_visual: "引用 workflow.md frontmatter、.lock.yml 编译产物、safe outputs 写操作类型"
+    - heading: "一句话理解整体架构"
+      reader_question: "这么多仓库，它们到底是什么关系？"
+      purpose: "给读者一个可记忆的全链路 summary"
+      evidence_or_visual: "Mermaid 流程图，从 workflow.md 到 GitHub API 的完整数据流"
+    - heading: "组件逐一解读"
+      reader_question: "每个仓库具体做什么？在链路中是什么位置？"
+      purpose: "逐一拆解 6 个组件的定位、机制、交互和价值"
+      evidence_or_visual: "每个子节引用对应仓库 README 的关键信息（Docker sandbox、guard policies、exit codes 等）"
+    - heading: "编译与运行全链路"
+      reader_question: "从写 workflow.md 到 PR 被创建，中间到底经历了什么？"
+      purpose: "把前面分散的组件串联成一条完整链路"
+      evidence_or_visual: "16 步 Mermaid 时序图，强调 intent → artifact → detection → validation → scoped write"
+    - heading: "核心能力 TOP 3"
+      reader_question: "这套系统最独特的能力是什么？"
+      purpose: "从工程视角提炼 3 个差异化能力"
+      evidence_or_visual: "每点引用具体机制（compile→lock.yml、AWF+MCPG+threat detection、MCP gateway guard）"
+    - heading: "典型使用场景"
+      reader_question: "我手上的任务适不适合用 gh-aw？"
+      purpose: "列出 6 个典型场景并解释为什么适合"
+      evidence_or_visual: "列表+简要说明"
+    - heading: "适合谁，不适合谁"
+      reader_question: "我的团队该不该用？"
+      purpose: "给出明确的适合/不适合判断"
+      evidence_or_visual: "对比列表，引用系统复杂度和运维成本"
+    - heading: "优点与风险"
+      reader_question: "这套东西的工程代价是什么？"
+      purpose: "诚实分析优点和风险"
+      evidence_or_visual: "对比列表，引用 threat detection 不是绝对保证等 README 原文"
+    - heading: "最终观点：是否值得用"
+      reader_question: "所以到底值不值得？"
+      purpose: "回收开头判断，给出分层结论和行动建议"
+      evidence_or_visual: "分层判断（个人/开源 maintainer/组织/高安全场景）+ 行动建议"
+  closing_total: "回收核心判断：gh-aw 是安全可控的 Agent 自动化平台而非简单脚本运行器；对个人偏重、对开源 maintainer 值得试点、对组织级平台非常值得研究、对高安全场景需结合人工审批"
+
+visual_plan:
+  min_content_visuals: 3
+  cover:
+    required: true
+    role: "建立文章主题第一印象，展示 gh-aw 架构概览"
+  visuals:
+    - type: "mermaid"
+      placement: "开头 1/3（一句话架构之后）"
+      purpose: "从 workflow.md 到 GitHub API 的完整数据流，降低架构理解成本"
+      asset: "inline"
+    - type: "table"
+      placement: "中段（组件逐一解读之前或之后）"
+      purpose: "6 个组件的定位、机制、独特价值速查表"
+      asset: "inline"
+    - type: "mermaid"
+      placement: "中段（编译与运行全链路）"
+      purpose: "16 步完整链路时序图，串联所有组件"
+      asset: "inline"
+    - type: "mermaid"
+      placement: "结尾前（适合谁/不适合谁之后）"
+      purpose: "决策树，帮读者判断自己是否适合用 gh-aw"
+      asset: "inline"
+
+review_passes:
+  style_pass:
+    required: true
+    checks:
+      - "去 AI 味和说教感"
+      - "确认开头有具体用户场景和冲突"
+      - "确认每个 H2 先回答读者问题"
+      - "确认结尾回扣开头判断并给行动建议"
+  evidence_pass:
+    required: true
+    checks:
+      - "6 个仓库都有引用角标"
+      - "关键机制（Docker sandbox、guard policies、exit codes）有来源"
+      - "每个 H2 有引用或代码或表格支撑"
+  visual_pass:
+    required: true
+    checks:
+      - "封面图 + 至少 3 张内容图（3 个 mermaid + 1 个 table）"
+      - "开头、中段、结尾前都有视觉停顿"
+
+regeneration_policy:
+  preserve_core_claim: true
+  preserve_slug: true
+  refresh_date_on_material_change: true
+  allow_rewrite: true
+  require_source_refresh: true
+  require_tone_pass: true
+
+revision_log:
+  - date: "2026-06-28"
+    change: "创建文章规格"
+    reason: "让文章可复现生成"
