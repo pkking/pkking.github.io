@@ -1,6 +1,6 @@
 ---
 title: GitHub Agentic Workflows 深度解析：不只是"用自然语言写 Actions"
-date: 2026-06-27 23:00:00
+date: 2026-06-28 01:01:15
 tags:
   - GitHub Actions
   - Agentic Workflows
@@ -16,17 +16,30 @@ cover: cover.webp
 
 ![GitHub Agentic Workflows gh-aw 封面图](cover.webp)
 
-GitHub Agentic Workflows（命令行叫 `gh-aw`）在 2026 年 2 月 13 日进入技术预览。大多数介绍把它说成"用自然语言写 GitHub Actions，少写 YAML"。这是对的，但只对了一成。如果你只记住这句话，会错过它真正值得重视的东西，也会在选型时犯方向性错误。
+GitHub Agentic Workflows（命令行叫 `gh-aw`[1](https://github.com/github/gh-aw)）在 2026 年 2 月 13 日进入技术预览。它本质上是一个 GitHub CLI 扩展[2](https://cli.github.com/)，负责把你写的 Markdown 工作流编译成 GitHub Actions 里的可执行 workflow[3](https://docs.github.com/actions)。大多数介绍把它说成"用自然语言写 GitHub Actions，少写 YAML"。这是对的，但只对了一成。如果你只记住这句话，会错过它真正值得重视的东西，也会在选型时犯方向性错误。
 
 我的判断很直接：**gh-aw 的核心价值不在"用自然语言替代 YAML"——那是入口；它的核心是一个"编译器 + 安全边界"。它把一个本来无法审计、无法回滚的 AI agent，强行编译成一份可审查的 GitHub Actions YAML，并用 `safe-outputs` 白名单把 agent 的每一次写操作都收进一个留痕、可回滚、需人审的笼子里。** 它不是让 AI 更强，是让 AI 更"可治理"。
 
 这篇文章拆解它的真实机制、安全模型、适用边界和成本，读完你能带走一个判断框架和一份今天就能跑的 starter。
 
+## 先看懂几个核心概念
+
+如果你对 GitHub 生态不熟，先把下面几个词对齐，后文会顺很多：
+
+- `gh-aw[1](https://github.com/github/gh-aw)`：GitHub 官方的 `gh` CLI 扩展[2](https://cli.github.com/)，作用是把 Markdown 形式的 agentic workflow 编译成 GitHub Actions workflow。
+- `GitHub CLI[2](https://cli.github.com/)`：GitHub 官方命令行工具，`gh` 是它的主入口；`gh-aw` 不是一个独立平台，而是挂在这个命令行生态上的扩展。
+- `GitHub Actions[3](https://docs.github.com/actions)`：GitHub 的自动化执行系统，原本主要跑 CI/CD，现在也能承载 agent workflow。
+- `safe-outputs[4](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx)`：gh-aw 允许 agent 做哪些受控写操作的白名单，比如创建 issue、发评论、提 PR。
+- `MCP[5](https://modelcontextprotocol.io/)`：Model Context Protocol，agent 调用外部工具的一种协议层，gh-aw 也会通过它接工具。
+- `self-hosted runner[6](https://docs.github.com/actions/hosting-your-own-runners/about-self-hosted-runners)`：你自己机器上的 GitHub Actions 执行器，不是 GitHub 托管 runner。
+
+把这几个概念对上后，再看后面的“编译器”“安全边界”“权限模型”，你就不会把 gh-aw 误解成“只是一个更会写 YAML 的 LLM”。
+
 ## GitHub Agentic Workflows 是什么：从研究 demonstrator 到技术预览
 
 先理清一个容易被混淆的点：gh-aw 有两个仓库、两个阶段。
 
-第一站是 **GitHub Next** 的研究项目（`githubnext/gh-aw`，页面在 githubnext.com/projects/agentic-workflows）。GitHub Next 是 GitHub 的 R&D 预览实验室，他们把这个东西定位得很谦虚——原话是"not a product，not even a technical preview"，一个"research demonstrator"，用来探索 agentic 设计空间、学习什么有效什么无效。它甚至明确说自己有"sharp edges"（毛刺）：资源限制、工具可靠性、评估方法、安全性都还没收敛。
+第一站是 **GitHub Next[7](https://githubnext.com/projects/agentic-workflows/)** 的研究项目（`githubnext/gh-aw`，页面在 githubnext.com/projects/agentic-workflows）。GitHub Next 是 GitHub 的 R&D 预览实验室，他们把这个东西定位得很谦虚——原话是"not a product，not even a technical preview"，一个"research demonstrator"，用来探索 agentic 设计空间、学习什么有效什么无效。它甚至明确说自己有"sharp edges"（毛刺）：资源限制、工具可靠性、评估方法、安全性都还没收敛。
 
 第二站是 2026 年 2 月 13 日的[技术预览公告](https://github.blog/ai-and-ml/automate-repository-tasks-with-github-agentic-workflows/)，代码迁到 `github/gh-aw`（也就是你能在 GitHub 上直接装的那个），由 GitHub、Microsoft Research 和 Azure Core Upstream 联合推进。从"学习用的研究演示"升级到"请你来试的技术预览"。
 
@@ -222,7 +235,3 @@ gh-aw 不是终点，compile 这一步本身就是过渡态——官方的愿景
 - [GitHub Next 项目页（githubnext.com）](https://githubnext.com/projects/agentic-workflows/) — 研究 demonstrator 阶段的设计哲学与"为何不是产品"
 - [How They Work 文档](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/introduction/how-they-work.mdx) — 工作流结构与安全设计
 - [Peli's Agent Factory](https://github.github.com/gh-aw/blog/2026-01-12-welcome-to-pelis-agent-factory/) — 工作流模式导览
-
-## What's next
-
-- [《大教堂与集市》](/2024/09/20/The-Cathedral-the-Bazaa/) — 本文讲了“自动化维护杂活”，那篇讲开源靠人凝聚的本来面貌。自动化之前，先读懂被自动化的东西。
