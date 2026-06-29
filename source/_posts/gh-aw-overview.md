@@ -97,7 +97,7 @@ GitHub Agentic Workflows 的设计目标就是回应这个关键问题：用 Mar
 
 [gh-aw](https://github.com/github/gh-aw)[1] 是整套体系的核心入口。用户写的是 `workflow.md`，`gh-aw` 负责解析 frontmatter 和 markdown instructions，做 schema 校验、安全规则校验、编译规则处理，最终生成 `.lock.yml`——这是 GitHub Actions 真正会执行的 workflow 文件。
 
-它做的事情本质上是一个**编译器**的工作：把自然语言的任务描述转化为可执行、可审计、可版本化的 workflow。编译过程中会做 expression safety check、action pinning、依赖组装[8](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/reference/compilation-process.md)，很多风险在进入运行时之前就被拒掉了。
+它做的事情本质上是一个**编译器**的工作：把自然语言的任务描述转化为可执行、可审计、可版本化的 workflow。编译过程中会做 expression safety check、action pinning、依赖组装[8](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/reference/compilation-process.md)——其中 action pinning 把所有 `uses: repo@v6` 这类版本标签解析成不可变 commit SHA（输出格式 `repo@sha # version`），查找顺序是仓库内 `.github/aw/actions-lock.json` → 二进制内嵌的 golden pins → GitHub API 动态解析，供应链替换风险在编译期就被挡掉，很多风险在进入运行时之前就被拒掉了。
 
 **用户价值**：你不需要直接手写复杂的 YAML，不需要关心运行时文件怎么铺设。Workflow 的 source of truth 变成 Markdown——易读、易维护、协作友好。编译结果可以提交、review、追踪，和代码一样走 PR 流程。
 
@@ -107,11 +107,13 @@ GitHub Agentic Workflows 的设计目标就是回应这个关键问题：用 Mar
 
 这里最容易忽略的是：`gh-aw-actions` 不是"示例仓库"或"辅助仓库"，而是主仓库运行时契约的一部分。编译过程文档说得很明确，生成的 `.lock.yml` 会引用这里的 actions，而且 pin 更新由 `gh aw compile` 统一管理[8](https://github.com/github/gh-aw/blob/main/docs/src/content/docs/reference/compilation-process.md)。版本标签与主仓库对齐。
 
+版本对齐背后有具体工程：`sync-actions.yml` workflow 从主仓 `github/gh-aw` sparse-checkout `setup/`、`setup-cli/`、`.github/aw/`、`pkg/` 镜像过来，可按 semver / SHA / `latest` 触发并打对齐 tag[9](https://github.com/github/gh-aw-actions)。运行时 `setup` 还会用 `compat.json` 兼容矩阵校验编译时用的 `gh-aw` 版本：`blockedVersions` 命中直接 fail，低于 `minimumVersion` 也 fail，低于 `minRecommendedVersion` 只告警；`agent-compat-v1` 则给 Copilot、Claude 列出 `min-gh-aw`/`max-gh-aw` 到 `min-agent`/`max-agent` 的对应表，确保引擎版本与 `gh-aw` 版本兼容。
+
 **用户价值**：compiled workflow 可以在 runner 上自动准备 Agent 执行环境，复杂的运行时依赖被封装成可复用的 Action，你不用关心底层文件怎么铺设。
 
 ### `github/gh-aw-firewall`：网络隔离与出站控制
 
-[gh-aw-firewall](https://github.com/github/gh-aw-firewall)[10]（Agent Workflow Firewall，简称 AWF）是网络隔离层。它的工作机制是：使用 Docker sandbox 运行你的命令，内部有三个容器——Squid proxy 负责按域名白名单过滤出站流量，Agent 容器运行你的命令且所有 HTTP/HTTPS 都被路由到 Squid，还有一个可选的 API proxy sidecar 持有 LLM API key 使得密钥永远不到达 Agent 进程。
+[gh-aw-firewall](https://github.com/github/gh-aw-firewall)[10]（Agent Workflow Firewall，简称 AWF）是网络隔离层。它的工作机制是：使用 Docker sandbox 运行你的命令，内部由 Docker Compose 编排一组容器（最多 6 个 service）——核心是 Squid proxy（按域名白名单过滤出站流量）和 Agent 容器（运行你的命令，所有 HTTP/HTTPS 都被 `iptables-init` 容器用 DNAT 强制路由到 Squid）；可选的有 API proxy sidecar（持有 LLM API key，向 Agent 注入占位 key 使真实密钥永远不到达 Agent 进程）、cli-proxy（给 `gh` CLI 走 DIFC 隧道）、doh-proxy（DNS-over-HTTPS，防止 DNS 层外泄）。
 
 README 列出的能力包括 declarative config（JSON/YAML + JSON Schema）、域名和 URL 控制（allow/deny 规则、SSL Bump）、数据保护控制（DLP 扫描、DNS-over-HTTPS、agent runtime 限制）、API proxy 能力（OpenAI、Anthropic、Copilot、Gemini targets 的 rate limit 和 token steering），以及 operational tooling（预拉镜像、检查日志/统计/审计）。
 
@@ -123,13 +125,17 @@ README 列出的能力包括 declarative config（JSON/YAML + JSON Schema）、�
 
 它支持 routed mode 和 unified mode，可以代理 GitHub MCP、Safe Outputs MCP 和其他 MCP servers。最有差异化的是 **guard policies**：每个 server 可以配 `allow-only`（限制哪些 repo、什么 integrity level 的内容对 Agent 可见）或 `write-sink`（标记只写通道）。`allow-only` 里可以设 `repos`（`all` / `public` / 精确匹配 / 前缀匹配）、`min-integrity`（`merged` / `approved` / `unapproved` / `none`）、`blocked-users`、`approval-labels`、`trusted-users`、`tool-call-limits` 等策略。
 
+生产环境 guard 由 **WASM** 实现（从 `MCP_GATEWAY_WASM_GUARDS_DIR` 加载、per-server 分配），底层是 secrecy/integrity 双标签的 DIFC（Data Integrity/Flow Control）6 阶段流水线。`write-sink` 在启用 guards 时对**所有输出 server 必需**，其 `accept` 要匹配 `allow-only.repos` 产出的 secrecy tag（例如 `private:owner/repo`），只有标签匹配的写意图才会被放行到输出通道。网关还能以 **proxy mode**（`awmg proxy`）作为 HTTP 正向代理运行，拦截 `gh` CLI 及 REST/GraphQL 请求，把它们映射到同一套 guard 工具名后跑相同的 DIFC 流水线——这样 DIFC 治理不只覆盖 MCP 工具，也覆盖非 MCP 的直连 API 调用。
+
 **用户价值**：工具访问更可控。MCP server 可以统一接入、统一路由、统一治理。对维护多个仓库的团队来说，这比"让每个 agent 进程自己连自己的 MCP server"要可控得多。
 
 ### `github/gh-aw-threat-detection`：威胁检测组件
 
-[gh-aw-threat-detection](https://github.com/github/gh-aw-threat-detection)[13] 在 Safe Outputs 外化之前分析 Agent 输出的 artifacts。它检测三类威胁：prompt injection、secret leak、malicious patch。工作机制是运行一个独立的 agentic engine pass（Copilot、Claude、Codex 均可），引擎通过 `threat_detection_result` 工具报告 verdict，detector 收到有效 verdict 后立即终止引擎进程以控制成本。
+[gh-aw-threat-detection](https://github.com/github/gh-aw-threat-detection)[13] 在 Safe Outputs 外化之前分析 Agent 输出的 artifacts。它检测三类威胁：prompt injection、secret leak、malicious patch。工作机制是运行一个独立的 agentic engine pass（Copilot、Claude、Codex 均可），引擎通过 `threat_detection_result` 工具报告 verdict，detector 收到有效 verdict 后立即终止引擎进程以控制成本。这里有个关键安全属性是 **first-write-wins**：verdict 经 `report-result` 子命令原子写入私有文件（临时文件 + `os.Rename`），一旦有效 verdict 落盘就不再接受覆写——即便 LLM 后续被 prompt injection 操纵想改判，也只会拿到 "already recorded"，拿不到篡改 verdict 的窗口。
 
 Exit codes 设计得很清晰：`0` = safe（无威胁）、`1` = threat detected、`2` = 基础设施或配置错误。README 特别强调：**不要将 "safe" 结果视为安全保证**，它只是纵深防御中的一环，需要结合最小权限、人工 review 和仓库保护一起使用。
+
+因为 detector 通常跑在 AWF 沙箱里，stdout 对 GitHub Actions host 不可达，所以还有个 `conclude` 子命令负责桥接：它从共享挂载读 `detection_result.json`，把结果映射成 `gh-aw` orchestrator 的 `success` / `threat_detected` / `agent_failure` / `parse_error`，并导出 `GH_AW_DETECTION_CONCLUSION`、`GH_AW_DETECTION_REASON` 供 `safe_outputs` gate 消费。默认 **fail-closed**——检测到威胁或结果文件缺失就以非零退出阻塞下游写操作；若设置了 `GH_AW_DETECTION_CONTINUE_ON_ERROR`，则退化为 **advisory-only**：`threat_detected` 不再让 job 失败，只留信号给人审。
 
 **用户价值**：在 Agent 输出真正写入 GitHub 前增加一道审查。对自动创建 PR、评论、Issue 的场景非常关键。这是让 Agent 工作流适合在真实开源项目中使用的关键组件。
 
@@ -173,6 +179,8 @@ flowchart LR
 这条链路里最值得注意的一个设计原则是：**Agent 不应该直接拥有高权限 GitHub token，也不应该直接写 GitHub。** 写操作被拆成了 `intent → artifact → detection → validation → scoped write job` 五个阶段。Agent 在沙箱内生成结构化意图，threat detection 审查之后，Safe Outputs 根据策略做校验和过滤，最后由一个独立的最小权限 job 把结果写入 GitHub API。
 
 这意味着即使 Agent 被 prompt injection 操控，它的写操作也会被拦截在 Safe Outputs 这一关——它只能生成意图，不能直接执行。
+
+落到 GitHub Actions job 层面，编译产物是一条命名作业链：`pre_activation`（角色 / 标签 / skip 门控）→ `activation`（组装 prompt、校验 secret）→ `agent`（沙箱内跑引擎）→ `safe_outputs`（detection 通过后才跑，持最小写权限）→ `conclusion`（状态上报、失败处理），外加可选的 `apm`（打包 / 还原 agent 依赖）和 frontmatter 里自定义的 build/test job。其中 Safe Outputs 在 agent job 内就有一套**实时校验**：跑在 agent 进程里的 Safe Outputs MCP server（HTTP，port 3001）对每次写意图做 schema / rate-limit / 字段消毒校验，合法的追加进 `outputs.jsonl`，非法的当场拒回 agent；到了 `safe_outputs` job 再做一次**去重**（同 run 内相同评论去重、`group: true` 时关旧 issue 防 dup）后才以最小权限写 GitHub API。此外，workflow 用了 `expires` 字段时，编译器还会额外生成 `agentics-maintenance.yml`，用 pin 过的 action 做过期清理。
 
 ## 核心能力 TOP 3
 
