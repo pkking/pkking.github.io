@@ -28,3 +28,15 @@ Keep commit messages short and specific. Recent history uses patterns like `post
 ## Agent-Specific Instructions
 
 When regenerating or rewriting a post, follow `.agents/skills/blog-writer/SKILL.md` and refresh the matching `.agents/article-specs/<slug>/article-spec.yml` first. Do not place private generation metadata inside `source/`, because Hexo will publish it.
+
+**CRITICAL MULTI-AGENT ARCHITECTURE DIRECTIVE**:
+This project uses a Single-Responsibility Multi-Agent Pipeline for all content generation. **Before modifying any workflow or agent skill, you MUST read `.agents/ARCHITECTURE.md`**.
+
+**Meta-Cognition Protocol for Systemic Fixes**:
+When the user points out a recurring flaw in the content (e.g., "The AI forgot to explain the code", "The AI tone is too formal"), **DO NOT blindly append rules to the main `blog-writer` skill.** You MUST execute this checklist:
+1. **Diagnosis**: Is this a writing/story-arc issue, or a QA/review issue?
+2. **Delegation**: If it requires checking or enforcing a specific rule, you are STRICTLY FORBIDDEN from overloading the Writer.
+3. **Routing**: Does this check fit exactly into `editor-copy`, `editor-citation`, `editor-evidence`, or `editor-format`? If yes, update that specific skill.
+4. **Cellular Division**: If it's a completely new category of rule, you MUST create a NEW `editor-<name>/SKILL.md` subagent and wire it into the pipeline.
+
+The Writer agent should remain as 'dumb' and focused on narrative as possible. All intelligence regarding quality constraints belongs in the downstream Editor agents.

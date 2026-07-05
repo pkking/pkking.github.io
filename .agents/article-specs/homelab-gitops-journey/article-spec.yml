@@ -1,0 +1,61 @@
+slug: homelab-gitops-journey
+title: "Homelab 演进：迈向 100% GitOps 的得与失"
+audience: "Homelab 玩家，K8s 爱好者，寻找家用服务器部署最佳实践的开发者"
+reader_problem: "家里服务器重装一次掉半层皮，应用太多管理混乱，机密信息（密码/Token）到处硬编码，想抄大厂作业但不知道在 Homelab 环境下从何下手。"
+core_claim: "在 Homelab 中追求 100% GitOps 是终极解药，Argo CD 结合 Bitwarden Secrets Manager 优雅解决了配置与机密的痛点。但在企业落地时，SOPS 等基于 Git 的加密方案可能比依赖外部 Operator 的方案更合适。同时，缺乏蓝绿发布和可观测性让这套架构目前仍然存在隐患。"
+positioning: "从一个个人开发者的真实踩坑与复盘记录出发，不讲虚的概念，直接上落地现状与架构，并根据当前的不足规划下一步的演进。"
+story_arc: "场景：每次服务器重装或迁移带来的巨大痛苦；冲突：传统的脚本/手动部署难以维护，机密信息满天飞；判断：必须 100% GitOps 化，并详细拆解当前做对的（机密管理/ArgoCD）和没做好的（蓝绿发布/监控）；下一步：基于不足，引入 Service Mesh 的规划。"
+tone:
+  avoid: ["空洞的技术布道", "高高在上的教学口吻", "假大空的宣传用语", "AI味机器句式（如'不是...而是', '最真实的', '这是我最满意的部分'）"]
+  prefer: ["折腾日记的复盘口吻", "客观分析得失", "具体的实操感受"]
+concepts:
+  - name: GitOps
+    explanation: 以 Git 仓库作为单一真相来源，通过声明式代码管理基础设施和应用的实践。
+  - name: Argo CD
+    explanation: Kubernetes 的声明式 GitOps 持续交付工具，用于保持集群状态与 Git 仓库一致。
+  - name: Bitwarden Secrets Manager Operator
+    explanation: 一种将 Bitwarden 中管理的机密数据安全、自动地注入到 K8s 集群的方案。
+  - name: SOPS (Secrets OPerationS)
+    explanation: Mozilla 开源的机密数据编辑器，可加密 YAML/JSON 等文件并将其安全地提交到 Git 仓库中。
+sources:
+  - url: "https://github.com/pkking/homelab"
+    role: "一手来源：项目源码与架构设计要求"
+  - url: "https://argo-cd.readthedocs.io/en/stable/"
+    role: "辅助来源：Argo CD 文档"
+  - url: "https://bitwarden.com/help/secrets-manager-kubernetes-operator/"
+    role: "辅助来源：机密管理操作指南"
+citation_policy: "涉及现有架构状态时，直接引用 repo 里的真实设计文档和代码结构；提及第三方工具时需链接至官方文档。"
+structure:
+  - h2: "停电之夜：当“跑起来就行”变成基础设施的灾难"
+    purpose: "Situation (情境) / Hook: 引入一次意外断电或手贱误删，戳破了个人 Homelab 的岁月静好。现状是一直依赖手动 `kubectl apply`，集群状态完全是一门玄学。"
+  - h2: "灾后重建的绝望，与“配置漂移”的诅咒"
+    purpose: "Complication (冲突): 痛点在于找不回当初试错改出的环境变量和散落在备忘录里的野路子配置。抛出问题：个人微型数据中心，如何拥有抗摧毁的“不死之身”？"
+  - h2: "绝对真理：砍掉 Kubectl 权限，用 ArgoCD 固化集群灵魂"
+    purpose: "Answer (核心解法): 破局点，强制将 Git 作为唯一真理之源。场景回归：停电恢复后，ArgoCD 能在 15 分钟内把一切分毫不差地拉起。"
+    technical_evidence:
+      - "展示 Homelab Git 仓库的核心应用部署目录结构 (bootstrap/ vs projects/)"
+      - "贴一段真实的 ArgoCD ApplicationSet YAML，展示它是如何通过 Git Generator 动态被声明式管理的"
+  - h2: "机密管理：阻碍“全自动化恢复”的最后一块绊脚石"
+    purpose: "Deep Dive (深水区): 现实打击，密码不能明文上 GitHub。实战填坑：如何安全地把机密变成代码的一部分，真正实现 0 手动干预。"
+    technical_evidence:
+      - "展示一段 Bitwarden SecretProviderClass / BitwardenSecret 的 YAML 配置，说明密码是如何在 Pod 中自动注入的"
+  - h2: "伪需求与真痛点：Homelab 不需要蓝绿发布"
+    purpose: "Reality Check (防坑与升华): 祛魅。个人玩家不需要复杂的灰度/蓝绿发布，但极度缺失状态可视化监控和一键回滚。GitOps 的意义在于用一次性折磨换取运维自由。"
+visual_plan:
+  - type: cover
+    desc: "Homelab 极客风格的插画封面"
+  - type: architecture
+    desc: "当前的 GitOps 与机密管理分层架构图"
+  - type: mermaid
+    desc: "理想的蓝绿发布流量切换时序图"
+review_passes:
+  style_pass: "去除 AI 味，确保是以开发者自我复盘的语气来写。"
+  evidence_pass: "检查所说优缺点是否和 requirement.md、architecture.md 严格对齐。"
+  visual_pass: "确保有架构图和图表支撑论点，视觉停顿合理。"
+regeneration_policy:
+  refresh_date: true
+revision_log:
+  - date: "2026-07-03"
+    reason: "初始写作，基于最新 homelab 仓库状态"
+  - date: "2026-07-05"
+    reason: "重新生成：补齐 research_report.md；纠正 H5 与 story_arc 的对齐（蓝绿祛魅但下一步转 Service Mesh 用于可观测性）；补蓝绿时序图与第 3 张内容图；新增误区拆解（K8s Secret base64 / 蓝绿 overkill）与 SOPS 权衡（design.md future plan）"  

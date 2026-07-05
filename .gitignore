@@ -8,3 +8,16 @@ public/
 
 # skill 运行产物
 .agents/skills/auto-optimize-results.tsv
+
+# subagent 运行产物（会话日志/输出，不入库）
+.pi-subagents/
+
+# 多智能体会话产物（handoff/progress/briefing/request，不入库）
+.agents/explorer_m1/
+.agents/orchestrator/
+.agents/sentinel/
+.agents/victory_auditor/
+.agents/worker_m*/
+.agents/ORIGINAL_REQUEST.md
+refactor_report.md
+.agents/skills/blog-writer/SKILL.md

@@ -37,7 +37,7 @@ ignore_all_files_in_gitignore: true
 
 # list of additional paths to ignore in all projects
 # same syntax as gitignore, so you can use * and **
-ignored_paths: []
+ignored_paths: [".agents/skills/blog-writer/SKILL.md"]
 
 # whether the project is in read-only mode
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
