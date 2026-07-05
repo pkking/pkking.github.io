@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"pkking.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12,"onmobile":false},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat","show_result":true},"fold":{"enable":false,"height":500},"language":false,"highlight_theme":"night eighties"},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="Homelab 如何用 ArgoCD + Bitwarden Secrets Manager 实现 100% GitOps 拉起整个集群，机密为何不进 Git，以及蓝绿发布和可观测性为什么才是下一步的真痛点。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Homelab 演进：迈向 100% GitOps 的得与失">
+<meta property="og:url" content="https://pkking.github.io/2026/07/05/homelab-gitops-journey/index.html">
+<meta property="og:site_name" content="a cup of waaagh">
+<meta property="og:description" content="Homelab 如何用 ArgoCD + Bitwarden Secrets Manager 实现 100% GitOps 拉起整个集群，机密为何不进 Git，以及蓝绿发布和可观测性为什么才是下一步的真痛点。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://pkking.github.io/2026/07/05/homelab-gitops-journey/cover.webp">
+<meta property="article:published_time" content="2026-07-05T13:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-05T17:04:28.921Z">
+<meta property="article:author" content="Chaoran">
+<meta property="article:tag" content="ArgoCD">
+<meta property="article:tag" content="Bitwarden">
+<meta property="article:tag" content="GitOps">
+<meta property="article:tag" content="Homelab">
+<meta property="article:tag" content="Kubernetes">
+<meta property="article:tag" content="SOPS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://pkking.github.io/2026/07/05/homelab-gitops-journey/cover.webp">
+
+
+<link rel="canonical" href="https://pkking.github.io/2026/07/05/homelab-gitops-journey/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://pkking.github.io/2026/07/05/homelab-gitops-journey/","path":"2026/07/05/homelab-gitops-journey/","title":"Homelab 演进：迈向 100% GitOps 的得与失"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Homelab 演进：迈向 100% GitOps 的得与失 | a cup of waaagh</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+  <script src="/lib/lozad.min.js" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+  <script class="next-config" data-name="mermaid" type="application/json">{"enable":true,"theme":{"light":"forest","dark":"dark"},"js":{"url":"https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.1/mermaid.min.js","integrity":"sha256-BmQmdWDS8X2OTbrwELWK366LV6escyWhHHe0XCTU/Hk="}}</script>
+  <script src="/js/third-party/tags/mermaid.js" defer></script>
+
+
+
+
+
+  
+
+
+
+
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Source+Code+Pro:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@400;700&display=swap">
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">a cup of waaagh</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%81%9C%E7%94%B5%E4%B9%8B%E5%A4%9C%EF%BC%9A%E5%BD%93%E2%80%9D%E8%B7%91%E8%B5%B7%E6%9D%A5%E5%B0%B1%E8%A1%8C%E2%80%9D%E5%8F%98%E6%88%90%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E7%9A%84%E7%81%BE%E9%9A%BE"><span class="nav-number">1.</span> <span class="nav-text">停电之夜：当”跑起来就行”变成基础设施的灾难</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%81%BE%E5%90%8E%E9%87%8D%E5%BB%BA%E7%9A%84%E7%BB%9D%E6%9C%9B%EF%BC%8C%E4%B8%8E%E2%80%9D%E9%85%8D%E7%BD%AE%E6%BC%82%E7%A7%BB%E2%80%9D%E7%9A%84%E8%AF%85%E5%92%92"><span class="nav-number">2.</span> <span class="nav-text">灾后重建的绝望，与”配置漂移”的诅咒</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%9D%E5%AF%B9%E7%9C%9F%E7%90%86%EF%BC%9A%E7%A0%8D%E6%8E%89-Kubectl-%E6%9D%83%E9%99%90%EF%BC%8C%E7%94%A8-ArgoCD-%E5%9B%BA%E5%8C%96%E9%9B%86%E7%BE%A4%E7%81%B5%E9%AD%82"><span class="nav-number">3.</span> <span class="nav-text">绝对真理：砍掉 Kubectl 权限，用 ArgoCD 固化集群灵魂</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%BA%E5%AF%86%E7%AE%A1%E7%90%86%EF%BC%9A%E9%98%BB%E7%A2%8D%E2%80%9D%E5%85%A8%E8%87%AA%E5%8A%A8%E5%8C%96%E6%81%A2%E5%A4%8D%E2%80%9D%E7%9A%84%E6%9C%80%E5%90%8E%E4%B8%80%E5%9D%97%E7%BB%8A%E8%84%9A%E7%9F%B3"><span class="nav-number">4.</span> <span class="nav-text">机密管理：阻碍”全自动化恢复”的最后一块绊脚石</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%AA%E9%9C%80%E6%B1%82%E4%B8%8E%E7%9C%9F%E7%97%9B%E7%82%B9%EF%BC%9AHomelab-%E4%B8%8D%E9%9C%80%E8%A6%81%E8%93%9D%E7%BB%BF%E5%8F%91%E5%B8%83"><span class="nav-number">5.</span> <span class="nav-text">伪需求与真痛点：Homelab 不需要蓝绿发布</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%EF%BC%88FAQ%EF%BC%89"><span class="nav-number">6.</span> <span class="nav-text">常见问题（FAQ）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">7.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Chaoran"
+      src="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+  <p class="site-author-name" itemprop="name">Chaoran</p>
+  <div class="site-description" itemprop="description">some notions</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">50</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/pkking" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;pkking" rel="noopener me" target="_blank"><i class="github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:pkwarcraft@gmail.com" title="E-Mail → mailto:pkwarcraft@gmail.com" rel="noopener me" target="_blank"><i class="envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://pkking.github.io/2026/07/05/homelab-gitops-journey/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://seccdn.libravatar.org/avatar/a656183a2eb6b005e51d4a13da20a1de">
+      <meta itemprop="name" content="Chaoran">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="a cup of waaagh">
+      <meta itemprop="description" content="some notions">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Homelab 演进：迈向 100% GitOps 的得与失 | a cup of waaagh">
+      <meta itemprop="description" content="Homelab 如何用 ArgoCD + Bitwarden Secrets Manager 实现 100% GitOps 拉起整个集群，机密为何不进 Git，以及蓝绿发布和可观测性为什么才是下一步的真痛点。">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Homelab 演进：迈向 100% GitOps 的得与失<a href="https://github.com/pkking/pkking.github.io/edit/hexo/source/_posts/homelab-gitops-journey.md" class="post-edit-link" title="编辑" rel="noopener" target="_blank"><i class="fa fa-pen-nib"></i></a>
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-07-05 21:00:00" itemprop="dateCreated datePublished" datetime="2026-07-05T21:00:00+08:00">2026-07-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2026-07-06 01:04:28" itemprop="dateModified" datetime="2026-07-06T01:04:28+08:00">2026-07-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Infrastructure/" itemprop="url" rel="index"><span itemprop="name">Infrastructure</span></a>
+        </span>
+    </span>
+
+  
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2026/07/05/homelab-gitops-journey/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2026/07/05/homelab-gitops-journey/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+</div>
+
+            <div class="post-description">Homelab 如何用 ArgoCD + Bitwarden Secrets Manager 实现 100% GitOps 拉起整个集群，机密为何不进 Git，以及蓝绿发布和可观测性为什么才是下一步的真痛点。</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><link rel="stylesheet" type="text/css" href="/lib/hint.min.css"><p><img data-src="/2026/07/05/homelab-gitops-journey/cover.webp" alt="封面"></p>
+<p>家用服务器最怕的不是性能不够，是一次断电之后再也拼不回原来的样子。我这篇复盘要给的结论很直接：在 Homelab 里把整个集群的真理之源押到 Git 仓库上，用 <a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/">ArgoCD</a> 做声明式同步、用 <a target="_blank" rel="noopener" href="https://bitwarden.com/help/secrets-manager-kubernetes-operator/">Bitwarden Secrets Manager Operator</a> 注入机密，是目前家用环境里恢复成本最低、抗摧毁能力最强的组合。机密管理和 <a target="_blank" rel="noopener" href="https://www.weave.works/technologies/gitops/">GitOps</a> 这两块，我的 <code>requirement.md</code> 里已经全部打勾落地；但蓝绿发布和状态可视化监控，至今还是空缺——这才是真正卡住”全自动化”的痛点。</p>
+<p>先说”得”的部分：机密不再散落在备忘录和 shell history 里，Bitwarden 在云端统一管，手机上改了密码集群自动同步；ArgoCD selfHeal 把任何手贱的 <code>kubectl apply</code> 都自动纠偏回 Git 声明的状态，停电恢复后基本不用人介入。再说”失”：我在 <code>architecture.md</code> 里规划过用 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Service_mesh">Service Mesh</a> 做蓝绿流量切换，但一直没落地；更要命的是监控也没补上，集群出问题时我常常是最后一个知道的。</p>
+<p>还有一个我得讲清楚的权衡——企业环境里落地这套，<a target="_blank" rel="noopener" href="https://github.com/getsops/sops">SOPS</a> 这类把密文直接加密进 Git 的方案可能比依赖外部 Operator 更合适。Homelab 选 Bitwarden 是图手机端改密码的便利，但这个 trade-off 不是没有代价。下面我就按”灾难 → 诅咒 → 破局 → 深水区 → 防坑”的顺序，把整条演进路径摊开讲。</p>
+<h2 id="停电之夜：当”跑起来就行”变成基础设施的灾难"><a href="#停电之夜：当”跑起来就行”变成基础设施的灾难" class="headerlink" title="停电之夜：当”跑起来就行”变成基础设施的灾难"></a>停电之夜：当”跑起来就行”变成基础设施的灾难</h2><p>上个月一个周末，小区突发短暂断电。等供电恢复、机器重新亮起绿灯时，我盯着无法访问的 Homelab 导航页陷入了沉思。这台跑着多架构混合服务的机器，底座系统还是当年踩坑<a href="https://pkking.github.io/2015/05/12/crossBuild/">跨架构构建 deb</a>才装稳的。</p>
+<p>以前折腾家里这台服务器，信奉的哲学就是”跑起来就行”。应用越堆越多——从自托管的 <a href="https://pkking.github.io/2023/08/29/stable-diffusion-webui/">stable-diffusion-webui</a> 到 <a target="_blank" rel="noopener" href="https://n8n.io/">n8n</a> 自动化，再到各种数据库——部署方式也五花八门：有的靠手动敲 <code>docker run</code>，有的靠不知塞在哪个目录下的 <code>docker-compose.yml</code>，后来上了 <a target="_blank" rel="noopener" href="https://kubernetes.io/">Kubernetes</a>，又变成对着一堆散落的 YAML 手动执行 <code>kubectl apply</code>。机器平稳运行时，这种玄学状态还能勉强维持岁月静好的假象。但断电重启，直接把这层遮羞布扯得粉碎。</p>
+<p>几个容器起不来，靠 <code>docker ps</code> 一个个翻日志能救回来；可上了 K8s 之后，一个 Pod 挂了到底是镜像问题、ConfigMap 没挂对、还是上次手抖改了某个 Service 的 selector？没有单一真相来源，排查全凭记忆。那晚我守着终端到凌晨两点，第二天顶着黑眼圈下定决心——这套”跑起来就行”的野路子，必须结束。</p>
+<h2 id="灾后重建的绝望，与”配置漂移”的诅咒"><a href="#灾后重建的绝望，与”配置漂移”的诅咒" class="headerlink" title="灾后重建的绝望，与”配置漂移”的诅咒"></a>灾后重建的绝望，与”配置漂移”的诅咒</h2><p>断电那次真正让我绝望的不是重启，是重建。我要找回那些当初试错试出来的环境变量、找散落在三四个备忘录和 Telegram 自建频道里的野路子配置，还要回忆某个 <a target="_blank" rel="noopener" href="https://helm.sh/">Helm</a> release 当初到底 override 了哪些 value。有些配置只在当时的 shell history 里存在过，而那台机器的 shell history 早随着重装灰飞烟灭。</p>
+<p>这就是 <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Configuration_drift">配置漂移</a>（Configuration Drift）的诅咒：运行态和声明态一点点偏离，而且偏离的过程没有任何记录。等灾难来临你才发现，你以为自己拥有一个集群，其实你只拥有一堆”当时这么敲过”的模糊记忆。</p>
+<p>这里有个常见误解得说清楚：很多人把 GitOps 等同于 CI/CD push 流水线，以为配个 GitHub Actions 跑 <code>kubectl apply</code> 就算 GitOps 了。其实不是。GitOps<a target="_blank" rel="noopener" href="https://www.weave.works/technologies/gitops/">2</a> 的核心是 pull 模式——集群侧的控制器持续去拉 Git 的声明状态并与之对齐，而不是流水线主动 push。差别在哪？push 模式下，流水线跑完就不管了，之后谁手动改了集群它一无所知；pull 模式下，控制器会持续监听并纠正偏离。这个差别，正是抗配置漂移的关键。</p>
+<p>那问题来了：个人微型数据中心，怎么拥有抗摧毁的”不死之身”？</p>
+<h2 id="绝对真理：砍掉-Kubectl-权限，用-ArgoCD-固化集群灵魂"><a href="#绝对真理：砍掉-Kubectl-权限，用-ArgoCD-固化集群灵魂" class="headerlink" title="绝对真理：砍掉 Kubectl 权限，用 ArgoCD 固化集群灵魂"></a>绝对真理：砍掉 Kubectl 权限，用 ArgoCD 固化集群灵魂</h2><p>我的破局点很粗暴——把 Git 仓库当作唯一真理之源，然后尽量砍掉自己直接动集群的权限。<a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/">ArgoCD</a> 负责持续把 Git 声明的状态拉到集群里，任何手动改动都会被自动回滚。这套做法甚至做到了连 ArgoCD 自己都是被 Git 管起来的，用 <a target="_blank" rel="noopener" href="https://argocd-autopilot.readthedocs.io/en/stable/">argo-cd-autopilot</a> 做自举（bootstrap）。</p>
+<p>下面是 <a target="_blank" rel="noopener" href="https://github.com/pkking/homelab">源码仓库</a> 里 <code>bootstrap/root.yaml</code> 的真实内容，它是整个集群的自举入口：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">argoproj.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Application</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">root</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">argocd</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">destination:</span></span><br><span class="line">    <span class="attr">namespace:</span> <span class="string">argocd</span></span><br><span class="line">    <span class="attr">server:</span> <span class="string">https://kubernetes.default.svc</span></span><br><span class="line">  <span class="attr">project:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">source:</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">projects</span>                          <span class="comment"># 根 App 指向 projects/ 目录</span></span><br><span class="line">    <span class="attr">repoURL:</span> <span class="string">https://github.com/pkking/homelab.git</span></span><br><span class="line">  <span class="attr">syncPolicy:</span></span><br><span class="line">    <span class="attr">automated:</span></span><br><span class="line">      <span class="attr">allowEmpty:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">prune:</span> <span class="literal">true</span>                           <span class="comment"># 删 Git 即删集群资源</span></span><br><span class="line">      <span class="attr">selfHeal:</span> <span class="literal">true</span>                        <span class="comment"># 手动改动会被自动纠偏</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>说下它怎么跑：root Application 自己就声明在 <code>argocd</code> 命名空间里，它的 source 指向 Git 仓库的 <code>projects/</code> 目录。<code>selfHeal: true</code> 是整个设计的灵魂——这意味着不管谁手贱去 <code>kubectl edit</code> 了集群里的资源，ArgoCD 检测到状态偏离后会自动把它纠回 Git 声明的样子；<code>prune: true</code> 则保证我在 Git 里删掉一个应用，集群里对应的资源也会被清掉。换句话说，Git 仓库删一行，集群里就少一个服务，完全不用人去收拾。</p>
+<p>仓库的目录结构也对应了这套分层思维，下面是真实结构（不是编的）：</p>
+<figure class="highlight plaintext"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">bootstrap/      集群底座：argo-cd/（ArgoCD 自身）、cluster-resources/、root.yaml</span><br><span class="line">projects/       AppProject + ApplicationSet（应用批量生成入口）</span><br><span class="line">apps-index/     Helm umbrella chart：n8n/postgresql/bitwarden/argo-event 等</span><br><span class="line">app_configs/    各服务 Helm values：*_values.yaml</span><br><span class="line">crds/           CRD 定义：csi/、n8n/、postgresql/（含 secrets.yaml）</span><br><span class="line">operators/      Operator 部署：postgresql/</span><br><span class="line">apps/           各应用目录（供 ApplicationSet 扫描 config.json）</span><br></pre></td></tr></tbody></table></figure>
+
+<p>真正让我觉得”爽”的是应用批量生成那套机制。<code>projects/default.yaml</code> 里用一个 <a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/">ApplicationSet</a> + Git Generator，动态扫描每个应用的配置文件：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">argoproj.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ApplicationSet</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">default</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">argocd</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">generators:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">git:</span></span><br><span class="line">      <span class="attr">files:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">apps/**/default/config.json</span>   <span class="comment"># 扫描每个应用的配置文件</span></span><br><span class="line">      <span class="attr">repoURL:</span> <span class="string">https://github.com/pkking/homelab.git</span></span><br><span class="line">      <span class="attr">requeueAfterSeconds:</span> <span class="number">20</span>               <span class="comment"># 每 20 秒轮询一次 Git</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">name:</span> <span class="string">default-{{</span> <span class="string">userGivenName</span> <span class="string">}}</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">destination:</span></span><br><span class="line">        <span class="attr">namespace:</span> <span class="string">'<span class="template-variable">{{ destNamespace }}</span>'</span></span><br><span class="line">      <span class="attr">source:</span></span><br><span class="line">        <span class="attr">path:</span> <span class="string">'<span class="template-variable">{{ srcPath }}</span>'</span></span><br><span class="line">        <span class="attr">repoURL:</span> <span class="string">'<span class="template-variable">{{ srcRepoURL }}</span>'</span></span><br><span class="line">      <span class="attr">syncPolicy:</span></span><br><span class="line">        <span class="attr">automated:</span> { <span class="attr">prune:</span> <span class="literal">true</span>, <span class="attr">selfHeal:</span> <span class="literal">true</span> }</span><br></pre></td></tr></tbody></table></figure>
+
+<p>原理是这样：新增一个服务，我要做的全部操作就是往 <code>apps/&lt;服务名&gt;/default/config.json</code> 丢一个 JSON 文件并 push 到 Git。ApplicationSet 的 Git Generator 每 20 秒扫一次 <code>apps/**/default/config.json</code>，发现新文件就读出里面的 <code>userGivenName</code>、<code>destNamespace</code>、<code>srcPath</code> 等字段，自动渲染出一个 ArgoCD Application。这就是”丢个 JSON 就能拉起服务”的真相——不是什么魔法，是 Git Generator 把目录扫描变成了声明式应用工厂。</p>
+<p>这套东西跑稳之后，我几乎都忘了 <code>kubectl</code> 怎么拼了。现在所有变更都走 PR——顺带一提，仓库的 CI 我也用 <a href="https://pkking.github.io/2026/06/27/gh-aw-overview/">GitHub Agentic Workflows</a> 做了自动化，但那是 push 侧的事；集群侧的拉起完全是 ArgoCD 的 pull 模式。停电恢复后 ArgoCD 会在十几分钟内把一切分毫不差地拉回来，因为真理在 Git 里，集群只是 Git 的一个投影。</p>
+<p>下面这张图把 ArgoCD 的调和循环画了出来：</p>
+<pre><code class="highlight mermaid">flowchart LR
+    A[Git 仓库&lt;br/&gt;homelab 声明态] --&gt;|push/PR| B[ArgoCD 控制器]
+    B --&gt;|每 20s 轮询对比| C{状态是否一致?}
+    C --&gt;|是| D[保持观察]
+    C --&gt;|否- Git 变了| E[同步集群到新声明]
+    C --&gt;|否- 集群被手动改了| F[selfHeal 纠偏回 Git 态]
+    E --&gt; D
+    F --&gt; D
+    D -.-&gt; B</code></pre>
+
+<p>一句话总结这张图：Git 是唯一输入，集群只是被动投影。任何手贱 <code>kubectl edit</code> 改出来的状态都只是临时假象，迟早被 selfHeal 抹回 Git 声明的样子——这正是停电后不用人介入就能恢复的底层机制。</p>
+<h2 id="机密管理：阻碍”全自动化恢复”的最后一块绊脚石"><a href="#机密管理：阻碍”全自动化恢复”的最后一块绊脚石" class="headerlink" title="机密管理：阻碍”全自动化恢复”的最后一块绊脚石"></a>机密管理：阻碍”全自动化恢复”的最后一块绊脚石</h2><p>GitOps 把应用配置都收编了，但有一类东西天然不能进 Git——密码、Token、API Key。如果不解决机密，”100% GitOps”就是个半残的口号，因为恢复时总得有人手动去填一遍密码。</p>
+<p>还有个流传更广的误解：”<a target="_blank" rel="noopener" href="https://kubernetes.io/">Kubernetes</a> Secret 是安全的”。错。design.md 里写得很直白：Kubernetes Secret 只是 base64 编码，<code>not secure enough for sensitive information</code>。base64 是编码不是加密，<code>echo &lt;value&gt; | base64 -d</code> 一秒还原。把 base64 的 Secret 提交到 Git 仓库，等于明文存密码。这个坑我早期踩过，后来下决心必须上专门的机密管理方案。</p>
+<p>我选的是 <a target="_blank" rel="noopener" href="https://bitwarden.com/help/secrets-manager-kubernetes-operator/">Bitwarden Secrets Manager Operator</a>。选它的理由很实际：原生 K8s 集成、Pod 运行时注入机密、有 web 控制台在线编辑、最关键的是手机 App 能随时改密码——对一个 Homelab 玩家来说，躺床上发现某个服务密码该轮换了，掏出手机就能改，集群自动同步，这体验比啥都强。</p>
+<p>下面是 <code>crds/postgresql/secrets.yaml</code> 里的真实配置（<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/">CRD</a>，即自定义资源定义）：</p>
+<figure class="highlight yaml"><table><tbody><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">k8s.bitwarden.com/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">BitwardenSecret</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">n8n-user-bw-secret</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">organizationId:</span> <span class="string">"b438a2aa-..."</span>          <span class="comment"># Bitwarden 组织 ID</span></span><br><span class="line">  <span class="attr">authToken:</span></span><br><span class="line">    <span class="attr">secretName:</span> <span class="string">bw-auth-token</span></span><br><span class="line">    <span class="attr">secretKey:</span> <span class="string">token</span></span><br><span class="line">  <span class="attr">map:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">bwSecretId:</span> <span class="string">b432b279-...</span>            <span class="comment"># 指向 Bitwarden 云端条目</span></span><br><span class="line">      <span class="attr">secretKeyName:</span> <span class="string">username</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">bwSecretId:</span> <span class="string">67aac42e-...</span></span><br><span class="line">      <span class="attr">secretKeyName:</span> <span class="string">password</span></span><br></pre></td></tr></tbody></table></figure>
+
+<p>它的机制是：YAML 里压根没有明文密码，只有两个 <code>bwSecretId</code> 占位符。<a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/workloads/pods/">Pod</a> 启动时，集群里的 Bitwarden Operator 拿认证 Token 去 Bitwarden 云端，按这些 ID 把真正的账号密码取回来，在内存里挂载给容器。改密码只需在 Bitwarden 手机端操作，Operator 检测到云端变化会自动刷新集群里的 Secret。所以 Git 仓库里只有”去哪取密码”的地址，没有密码本身——至少表面上是这样。</p>
+<p>但这里有个我必须如实交代的权衡。design.md 里专门点了名：<code>BitwardenSecret</code> 自定义资源里 inline 了 <code>organizationId</code> 和 <code>bwSecretId</code>，这两个值是明文进 Git 的。它们虽然不是密码本身，却等于暴露了机密在 Bitwarden 云端的”地址”——拿到这些 ID 加上一个泄露的 auth token，就能定位并取走机密。在一个公开的 Git 仓库里，这个风险是实打实的。</p>
+<p>这就引出了我反复纠结的方案对比。如果是企业落地，我倾向于认为 <a target="_blank" rel="noopener" href="https://github.com/getsops/sops">SOPS</a>（Secrets OPerationS，Mozilla 开源的机密编辑器）可能比依赖外部 Operator 更合适：SOPS 可以只加密 YAML 里的敏感字段、把密文整体提交进 Git，机密的”地址”和”内容”都加密了，恢复时用 KMS 解密，完全不依赖一个长驻的外部 Operator 去访问云端。它的代价是没有 Bitwarden 那种手机端随时改密码的便利，且需要管理解密密钥。Homelab 我最终留在 Bitwarden，核心就是图那个手机端编辑的便利，但这个 trade-off 必须讲清楚——便利是用”暴露机密地址”换来的。</p>
+<p>顺带一提，design.md 也留了演进口：未来可能通过 <a target="_blank" rel="noopener" href="https://external-secrets.io/">External Secrets Operator</a> 这层通用抽象，切到 AWS Secrets Manager 或 HashiCorp Vault，架构是有升级空间的。下面这张分层架构图把当前的 GitOps + 机密管理整体串起来：</p>
+<pre><code class="highlight mermaid">flowchart TB
+    subgraph Source["真理之源层（Git 仓库）"]
+        S1[bootstrap/ root.yaml]
+        S2[projects/ ApplicationSet]
+        S3[app_configs/ Helm values]
+        S4[crds/ BitwardenSecret CR]
+    end
+    subgraph Control["大脑层（集群内控制器）"]
+        C1[ArgoCD&lt;br/&gt;selfHeal/prune]
+        C2[Bitwarden SM Operator&lt;br/&gt;按 ID 拉取机密]
+    end
+    subgraph Data["载体层（运行态）"]
+        D1[Pods]
+        D2[Secrets 内存挂载]
+        D3[CRD 实例]
+    end
+    S1 &amp; S2 &amp; S3 --&gt; C1
+    C1 --&gt; D1 &amp; D3
+    S4 --&gt; C2
+    C2 --&gt;|云端取回| D2
+    D2 -.挂载.-&gt; D1</code></pre>
+
+<p>看这张图要抓两条链路：上面那条是应用配置链（<code>bootstrap/projects/app_configs</code> 三层声明喂给 ArgoCD，由它拉起 Pod 和 CRD 实例）；下面那条是机密链（<code>crds/</code> 里的 BitwardenSecret CR 单独喂给 Bitwarden Operator，Operator 拿 ID 去云端取回密码，在内存挂载给 Pod）。两条链在 <code>D1 Pod</code> 处汇合——应用配置和机密注入是解耦的，各走各的控制器，这才能做到改密码不动应用、改应用不动密码。</p>
+<h2 id="伪需求与真痛点：Homelab-不需要蓝绿发布"><a href="#伪需求与真痛点：Homelab-不需要蓝绿发布" class="headerlink" title="伪需求与真痛点：Homelab 不需要蓝绿发布"></a>伪需求与真痛点：Homelab 不需要蓝绿发布</h2><p>走到这一步，机密和 GitOps都通了，按理说该心满意足。但我翻自己的 <code>requirement.md</code>，第 3 条”蓝绿部署”三个子项全是 <code>[ ]</code> 未勾选，<code>architecture.md</code> 里还白纸黑字写着要用 Service Mesh 做 blue/green 流量切换。我当初为啥规划它、又为啥一直没做？</p>
+<p>我得承认，蓝绿/灰度发布对个人 Homelab 是 overkill。家用环境真正想要的就是三件事：一键拉起、不怕搞坏、坏了能回滚，零停机平滑升级那套根本不是刚需。一个服务凌晨挂了十分钟，没人给我开故障工单；但我得能知道它挂了、并一键切回上个版本。换句话说，真正卡我的是“状态可视”和“快速回滚”这两件事——蓝绿发布解决不了前者，GitOps 的 selfHeal 倒是已经覆盖了后者（Git revert 即回滚）。</p>
+<p>另一个容易跑偏的认知：把蓝绿/灰度当成必备的企业级特性。对企业可能是，对 Homelab 玩家，它优先级排错了。真正卡我的是 <code>requirement.md</code> 里 Additional Considerations 提到的 Monitoring/logging 至今没落地——集群哪个 Pod 在 OOM、哪个 PVC 快满了、ArgoCD 同步失败了我都是最后一个知道。这才是真痛点。</p>
+<p>不过我没把话说死。蓝绿本身没错，问题出在“现在就上”。<code>architecture.md</code> 规划的蓝绿 + Service Mesh 流量切换长这样，我画出来供参考（这是理想形态，目前未落地）：</p>
+<pre><code class="highlight mermaid">sequenceDiagram
+    participant Dev as 开发者
+    participant Git as Git 仓库
+    participant Argo as ArgoCD
+    participant Mesh as Service Mesh&lt;br/&gt;(Istio/Linkerd)
+    participant Blue as Blue 环境
+    participant Green as Green 环境
+    Dev-&gt;&gt;Git: push 新版本到 green 配置
+    Git-&gt;&gt;Argo: 检测变更
+    Argo-&gt;&gt;Green: 部署 green 新版本
+    Argo-&gt;&gt;Mesh: green 就绪
+    Mesh--&gt;&gt;Blue: 流量仍在 blue（100%）
+    Mesh-&gt;&gt;Green: 灰度切 10% 流量
+    Mesh-&gt;&gt;Mesh: 健康检查通过?
+    alt 通过
+        Mesh-&gt;&gt;Green: 全量切流 100%
+        Mesh--&gt;&gt;Blue: 下线 blue
+    else 失败
+        Mesh--&gt;&gt;Blue: 流量回滚到 blue 100%
+    end</code></pre>
+
+<p>图看着很美，但对我现在的 Homelab，上 Service Mesh 仅为做蓝绿流量切换，投入产出比太低。我的判断是：下一步引入 Service Mesh，定位要改成”为可观测性和流量可见”，而不是”为蓝绿切换”。这跟旧版草稿里”根本不值得部署 Service Mesh”的结论相反——我现在认为值得部署，但动机变了：Service Mesh 能给我服务间调用的拓扑、延迟、错误率这些黄金指标，正好补上监控这块短板；蓝绿流量切换只是它捎带的能力，等监控跑顺了再考虑也不迟。</p>
+<p>所以这条演进路径的终局判断是：GitOps + 机密管理是地基，已经夯实；蓝绿发布是”锦上添花”而非”雪中送炭”，当前优先级压在监控之后；下一步引入 Service Mesh 的第一目标是可观测性，第二目标才是流量治理。用一次性的折腾，换长期的运维自由。</p>
+<h2 id="常见问题（FAQ）"><a href="#常见问题（FAQ）" class="headerlink" title="常见问题（FAQ）"></a>常见问题（FAQ）</h2><p><strong>Homelab 一定要上 K8s 吗？</strong><br>不一定。如果你的服务就三五个、不常变动，docker-compose 完全够用，配个 <a href="https://pkking.github.io/2026/02/07/dotfiles/">dotfiles</a> 把配置版本化管理就挺稳。上 <a target="_blank" rel="noopener" href="https://k3s.io/">K3s</a>（K8s 的轻量发行版）的门槛其实不高，但你得愿意为声明式思维付学习成本。我上 K8s 是因为服务多到手动管不过来，且想要自动故障恢复。</p>
+<p><strong>SOPS 和 Bitwarden Secrets Manager 怎么选？</strong><br>看你更在意”机密完全在 Git 里”还是”手机端随时改”。SOPS 把密文加密进 Git、不依赖外部 Operator，审计和离线恢复更干净，适合企业或重视自包含的场景；Bitwarden SM Operator 改密码方便、有云端兜底，但 inline 的 org/secret ID 有地址泄露风险，且依赖 Operator 常驻。我个人在 Homelab 选 Bitwarden 图便利，企业场景我会倾向 SOPS。</p>
+<p><strong>ArgoCD 和 <a target="_blank" rel="noopener" href="https://fluxcd.io/">Flux</a> 有什么区别？</strong><br>两者都是 GitOps 的 pull 模式控制器。ArgoCD 提供 Web UI、能可视化看到应用同步状态和差异，上手直观；Flux 更偏向 CLI 和 GitOps 原教旨主义，组件更模块化。我选 ArgoCD 主要是图那个 UI——集群出问题时一眼能看见哪个应用 OutOfSync。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Configuration_drift">1</a> Configuration drift（配置漂移）: <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Configuration_drift">https://en.wikipedia.org/wiki/Configuration_drift</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.weave.works/technologies/gitops/">2</a> GitOps: <a target="_blank" rel="noopener" href="https://www.weave.works/technologies/gitops/">https://www.weave.works/technologies/gitops/</a></li>
+<li><a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/">3</a> ArgoCD: <a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/">https://argo-cd.readthedocs.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/">4</a> ArgoCD ApplicationSet: <a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/">https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/</a></li>
+<li><a target="_blank" rel="noopener" href="https://argocd-autopilot.readthedocs.io/en/stable/">5</a> argo-cd-autopilot: <a target="_blank" rel="noopener" href="https://argocd-autopilot.readthedocs.io/en/stable/">https://argocd-autopilot.readthedocs.io/en/stable/</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/getsops/sops">6</a> SOPS（Secrets OPerationS）: <a target="_blank" rel="noopener" href="https://github.com/getsops/sops">https://github.com/getsops/sops</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/">7</a> Kubernetes: <a target="_blank" rel="noopener" href="https://kubernetes.io/">https://kubernetes.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/">8</a> Kubernetes CRD（自定义资源定义）: <a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/">https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/</a></li>
+<li><a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/workloads/pods/">9</a> Kubernetes Pod: <a target="_blank" rel="noopener" href="https://kubernetes.io/docs/concepts/workloads/pods/">https://kubernetes.io/docs/concepts/workloads/pods/</a></li>
+<li><a target="_blank" rel="noopener" href="https://helm.sh/">10</a> Helm: <a target="_blank" rel="noopener" href="https://helm.sh/">https://helm.sh/</a></li>
+<li><a target="_blank" rel="noopener" href="https://k3s.io/">11</a> K3s: <a target="_blank" rel="noopener" href="https://k3s.io/">https://k3s.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://n8n.io/">12</a> n8n: <a target="_blank" rel="noopener" href="https://n8n.io/">https://n8n.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://bitwarden.com/help/secrets-manager-kubernetes-operator/">13</a> Bitwarden Secrets Manager Operator: <a target="_blank" rel="noopener" href="https://bitwarden.com/help/secrets-manager-kubernetes-operator/">https://bitwarden.com/help/secrets-manager-kubernetes-operator/</a></li>
+<li><a target="_blank" rel="noopener" href="https://external-secrets.io/">14</a> External Secrets Operator: <a target="_blank" rel="noopener" href="https://external-secrets.io/">https://external-secrets.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://fluxcd.io/">15</a> Flux（GitOps 控制器）: <a target="_blank" rel="noopener" href="https://fluxcd.io/">https://fluxcd.io/</a></li>
+<li><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Service_mesh">16</a> Service Mesh: <a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Service_mesh">https://en.wikipedia.org/wiki/Service_mesh</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/pkking/homelab">17</a> pkking/homelab 源码仓库: <a target="_blank" rel="noopener" href="https://github.com/pkking/homelab">https://github.com/pkking/homelab</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Homelab/" rel="tag"># Homelab</a>
+              <a href="/tags/GitOps/" rel="tag"># GitOps</a>
+              <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+              <a href="/tags/ArgoCD/" rel="tag"># ArgoCD</a>
+              <a href="/tags/Bitwarden/" rel="tag"># Bitwarden</a>
+              <a href="/tags/SOPS/" rel="tag"># SOPS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/06/27/gh-aw-overview/" rel="prev" title="GitHub Agentic Workflows 架构解读：从 workflow.md 到安全可控的 Agent 自动化">
+                  <i class="fa fa-angle-left"></i> GitHub Agentic Workflows 架构解读：从 workflow.md 到安全可控的 Agent 自动化
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2015 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Chaoran</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/pkking" class="github-corner" title="在 GitHub 上关注我" aria-label="在 GitHub 上关注我" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"lcrpkking","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js" defer></script>
+
+</body>
+</html>
